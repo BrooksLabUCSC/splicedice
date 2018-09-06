@@ -6,36 +6,10 @@ layout: default
 
 
 
-## Installation
+## [Installation](./installation.html)
 
-### Requirements
-#### programs
-* python v. 3.4+
-* r v. ?.??
+## [Quick Usage](./quick_usage.html)
 
-#### python modules
-* numpy
-* multiprocessing
-* tqdm
-* scipy
+## Releases
 
-## Quick usage guide
-
-### Step 1.
-Do this.
-
-```bash
-# Bash code with syntax highlighting.
-for f in `ls ./beds`
-do
-        echo $f
-done
-```
-
-
-### Step 2.
-Then do this
-
-
-More details about this step can be found here:
-[Link to another page](./another-page.html).
+* version None
