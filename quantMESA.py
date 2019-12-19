@@ -47,17 +47,22 @@ class CommandLine(object) :
         Implements a parser to interpret the command line argv string using argparse.
         '''
         import argparse
-        self.parser = argparse.ArgumentParser(description = 'quantMESA.py - Cuantificar la mesa',
+        self.parser = argparse.ArgumentParser(description = 'quantMESA.py - Quantify mutually exclusive clusters.',
                                              epilog = 'Please feel free to forward any questions or concerns to /dev/null', 
                                              add_help = True, #default is True 
                                              prefix_chars = '-', 
                                              usage = '%(prog)s -m junction_beds_manifest.tsv -j step1_junctions.bed -c step1_clusters.bed ')
         # Add args
-        self.parser.add_argument('-m', '--bed_manifest', type=str, action = 'store', required=True, help='List of bed files containing stranded junctions.')
+        self.parser.add_argument('-m', '--bed_manifest',  type=str, action = 'store', required=True, help='List of bed files containing stranded junctions.')
         self.parser.add_argument('-j', '--junctions_bed', type=str, action = 'store', required=True, help='Junction bed file.')
-        self.parser.add_argument('-c', '--clusters_table', type=str, action = 'store', required=True, help='cluster table tsv.')
-        self.parser.add_argument('-t', '--threads', type=int, action = 'store', required=False, default=1, help='threads.')
+        self.parser.add_argument('--inclusion_thresh',    type=int, action = 'store', required=False, default=10, help='Filter events with less than N reads (default 10)')
+        self.parser.add_argument('--psi_thresh',          type=int, action = 'store', required=True, default=20, help='Do not compute PSI for samples with less than N reads (default 20)')
         
+
+        self.parser.add_argument('-c', '--clusters_table', type=str, action = 'store', required=True, help='cluster table tsv.')
+        self.parser.add_argument('-o', '--output_prefix', type=str, action = 'store', required=True, help='Output prefix')
+        #self.parser.add_argument('-p', '--threads', type=int, action = 'store', required=False, default=1, help='threads.')
+        self.parser.add_argument('--compressed', action = 'store_true', required=False, default=False, help='NPZ compression')
         
         if inOpts is None :
             self.args = vars(self.parser.parse_args())
@@ -144,20 +149,27 @@ def main():
     '''
     myCommandLine = CommandLine()
     
-    bedList = myCommandLine.args['bed_manifest']
+    bedList     = myCommandLine.args['bed_manifest']
     junctionBed = myCommandLine.args['junctions_bed']
-    clusters = myCommandLine.args['clusters_table']
-    threads = myCommandLine.args['threads']
-    
-
+    clusters    = myCommandLine.args['clusters_table']
+    comp        = myCommandLine.args['compressed']
+    outPrefix   = myCommandLine.args['output_prefix']
+    incT = myCommandLine.args['inclusion_thresh']
+    psiT = myCommandLine.args['psi_thresh']
 
     # Get list of bed file names for multiprocessing step.
-    beds = list()
+    beds   = list()
+    groups = dict()
     with open(bedList,'r') as fnames:
-        for fdata in fnames:
-            root,fname = fdata.split()
+        #next(fnames)
+        for num,fdata in enumerate(fnames,0):
+            root,fname,group1,group2 = fdata.rstrip().split("\t")
+            group1,group2 = group1.replace(" ",""), group2.replace(" ","")
             beds.append((root,fname))
-
+            if (group1,group2) not in groups:
+                groups[(group1,group2)] = list()
+            
+            groups[(group1,group2)].append(int(num))
 
     # Make junctionSet global for later steps.
     global junctionSet
@@ -166,7 +178,7 @@ def main():
     # Make junction objects
     n = 0
     with open(junctionBed,'r') as lines:
-        for line in tqdm(lines, total=864511, desc="Initializing junction counts"):
+        for line in tqdm(lines, desc="Initializing junction counts", position=1):
             j = line.rstrip().split()
             c1, c2 = map(int, [j[1], j[2]])
             jid = "%s:%s-%s" % (j[0],j[1],j[2])
@@ -175,15 +187,8 @@ def main():
             n += 1
 
 
-    #p = Pool(threads)
-    #finalSet = set()
-
-    # samples = list()
-    # for result in tqdm(p.imap_unordered(runCMD1, beds[:]), total=len(beds[:]), desc="Reading sample bed files for intron counts"):
-    #     samples.append(result)
-
     num = 0
-    for bed in tqdm(beds[:], total=len(beds[:]), desc="Quantifying junction usage per sample"):
+    for bed in tqdm(beds[:], total=len(beds[:]), desc="Quantifying junction usage per sample", position=1):
         root,fname = bed
         with open(fname,'r') as lines:
             for line in lines:
@@ -197,30 +202,53 @@ def main():
         num += 1
                 
 
-    #sys.exit(1)
-    #p.close()
-    #p.join()
+    dataQ = list()
+    dataP = list()
+    events = list()
+    beds = np.array(beds)
+    if not comp:
+        incOut = open('%s_inclusionCounts.tsv' % outPrefix ,'w')
+        psiOut = open('%s_allPSI.tsv' % outPrefix ,'w')
+        print("\t".join(beds[:,0]),"cluster",sep="\t",file=incOut)
+        print("\t".join(beds[:,0]),"cluster",sep="\t",file=psiOut)
 
-    lineNum = 0
     with open(clusters,'r') as lines:
-        for i in lines:
-            lineNum += 1
+        for line in tqdm(lines,  desc="Compute inclusion/exclusion counts", position=1):
+            intron, mxes = line.rstrip().split()
+            mxes = mxes.split(",")
+            
+            inclusions = junctionSet[intron].quant
+            exclusions = np.asarray([junctionSet[name].quant for name in mxes])
 
-    with open("default_out_new",'w') as out1:
-        print("\t".join([x[0] for x in beds]), "intron", "mxes", file=out1)
-        with open(clusters,'r') as lines:
-            for line in tqdm(lines, total=lineNum, desc="Compute inclusion/exclusion counts"):
-                intron, mxes = line.rstrip().split()
-                mxes = mxes.split(",")
-                
-                inclusions = junctionSet[intron].quant
-                exclusions = np.asarray([junctionSet[name].quant for name in mxes])
+            total = exclusions.sum(axis=0) + inclusions
 
-                exclusions = exclusions.sum(axis=0)
-                quants = ["%s:%s" % (x[0],x[1]) for x in zip(inclusions,exclusions)]
-                print("\t".join(quants), intron, ",".join(mxes), file=out1)
-    
+            # lets filter...
 
+            if np.max(inclusions)<incT:
+                continue
+
+            events.append(intron)
+            quants = np.asarray(["%s:%s" % (x[0],x[1]) for x in zip(inclusions,total)])
+            psiQuants = inclusions/total
+            psiQuants[total < psiT] = np.nan 
+            dataQ.append(quants)
+            dataP.append(psiQuants)
+            if not comp:
+                print("\t".join("%.2f" % x for x in psiQuants), intron, sep="\t", file=psiOut)
+                print("\t".join(quants), intron, sep="\t", file=incOut)
+    if comp:
+        cols,rows,data1 = np.array(beds), np.array(events), np.array(dataQ)
+        data2 = np.array(dataP,dtype=np.float32)
+        np.savez_compressed("%s_inclusionCounts.npz" % outPrefix,cols=cols,rows=rows,data=data1)
+        np.savez_compressed("%s_allPSI.npz" % outPrefix ,cols=cols,rows=rows,data=data2)
+
+    if not comp:
+        incOut.close()
+        psiOut.close()
+
+
+
+    print()
 
 if __name__ == "__main__":
     main()      

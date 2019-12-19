@@ -12,16 +12,14 @@
 #
 ########################################################################
 
-########################################################################
-# Hot Imports & Global Variable
-########################################################################
-
+#IMPORT
 import time
 import os, sys
 from tqdm import *
-from pybedtools import BedTool
-from multiprocessing import Pool, Manager
-from hurry.filesize import size
+from multiprocessing import Pool
+import tempfile
+import uuid 
+import pybedtools
 
 ########################################################################
 # CommandLine
@@ -47,25 +45,56 @@ class CommandLine(object) :
         Implements a parser to interpret the command line argv string using argparse.
         '''
         import argparse
-        self.parser = argparse.ArgumentParser(description = 'constructMESA.py - Construyo una mesa',
+        self.parser = argparse.ArgumentParser(description = 'constructMESA.py - Construct splicing table',
                                              #epilog = 'Please feel free to forward any questions or concerns to /dev/null', 
                                              add_help = True, #default is True 
                                              prefix_chars = '-', 
-                                             usage = '%(prog)s -m junction_beds_manifest.tsv ')
+                                             usage = '%(prog)s -m junction_beds_manifest.tsv -f genome.fa [other options]',
+                                             formatter_class=argparse.RawTextHelpFormatter)
+
         # Add args
-        self.parser.add_argument('-m', '--bed_manifest', type=str, action = 'store', required=True, help='List of bed files containing stranded junctions.')
-        self.parser.add_argument('-p', '--threads', type=int, action = 'store', default=1, required=False, help='Number of threads.')
-        self.parser.add_argument('-f', '--fasta_in', action = 'store', required=False, help='BedTools indexed Genome Fasta')
-        self.parser.add_argument('--junction_support_threshold', action = 'store', type=int, default = 10, required=False, help='Junction = Real if read support > Minimum threshold (10)')
-        self.parser.add_argument('--junction_length_max', action = 'store', type=int, default = 500000, required=False, help='Junction = Real if length < length threshold (500000)')
-        self.parser.add_argument('--junction_length_min', action = 'store', type=int, default = 50, required=False, help='Junction = Real if length > length threshold (50)')
-        self.parser.add_argument('--junction_min_samp_threshold', action = 'store', type=float, default = 0.1, required=False, help='Junction = Real if read support > Minimum threshold (0.1)')
+        self.parser.add_argument('-m', '--bed_manifest', action = 'store', required=True, 
+                                help='List of junction bed files.')
+        self.parser.add_argument('-f', '--fasta_in',     action = 'store', required=True, 
+                                help='BedTools indexed genome gasta.')
+
+        self.parser.add_argument('-o', '--out_prefix',   action = 'store', required=False, default='me',
+                                help='Output file prefix.')
+       
+
+        self.parser.add_argument('--filter',             action = 'store', required=False, default='gtag_only', type=lambda x: self.is_valid_filter(self.parser, x),
+                                help='Filter splice sites that\n'+
+                                    'filter non GT-AG splice sites : "gtag_only" (default),\n'+
+                                    'filter non GT/GC-AG and AT-AC introns: "gc_at",\n'+
+                                    'keep all splice sites: "all"')
+   
+        self.parser.add_argument('--resolve_strands',    action = 'store_true', required=False, default=False, 
+                                help='Resolve splice site strand based on dinucleotide.')
+
+        self.parser.add_argument('--support_threshold',  action = 'store', required=False, default = 10, type=int,
+                                help='Filter junctions < non-nomrlized read counts (10)')
+        self.parser.add_argument('--max_length',         action = 'store', required=False, default = 50000, type=int, 
+                                help='Filter junctions > N length (50,000)')
+        self.parser.add_argument('--min_length',     action = 'store', required=False, default = 50, type=int, 
+                                help='Filter junctions < N length (50)')
+        self.parser.add_argument('--min_samp_threshold', action = 'store', required=False, default = 0.01, type=float, 
+                                help='Filter junctions found in < N samples (0.1)')
         
+        self.parser.add_argument('-p', '--threads',      action = 'store', required=False, type=int, default=2, 
+                                help='Number of threads.')
         
         if inOpts is None :
             self.args = vars(self.parser.parse_args())
         else :
             self.args = vars(self.parser.parse_args(inOpts))
+
+
+    def is_valid_filter(self, parser, arg):
+        if arg not in ['gtag_only','gc_at','all']:
+            parser.error("Filter argument %s is invalid!" % arg)
+            sys.exit(1)
+        else:
+            return arg
 
 ########################################################################
 # Helper Functions
@@ -77,22 +106,22 @@ def bedToCoordSet(f):
     '''
     takes bed file and returns a set of junctions
     '''
+    fname, tdir = f
+    newOut = fname.split("/")[-1]
+    outName = os.path.join(tdir,"%s.tmp" % newOut)
     jSet = set()
+    with open(outName,'wb+') as fout:
+        with open(fname,'r') as lines:
+            for line in lines:
+                cols = line.rstrip().split()
+                chrom, c1, c2, i, score, strand = cols[:6]
+                c1,c2,score = map(int, [c1,c2,score])
+                if score<readThresh or c2 - c1 > lengthThresh:
+                    continue
+                cols[4] = '0'
+                outString = str.encode("\t".join(cols[:6]) + "\n")
+                fout.write(outString)
 
-    with open(f,'r') as lines:
-        for line in lines:
-            cols = line.rstrip().split()
-            chrom, c1, c2, i, score, strand = cols[:6]
-            c1,c2,score = map(int, [c1,c2,score])
-            if score<readThresh or c2 - c1 > lengthThresh:
-                continue
-            
-            bedEntry = (chrom, c1, c2, ".", 0, strand)
-            jSet.add(bedEntry)
-            
-    #print(f,sys.getsizeof(jSet))
-    
-    return jSet#s
 
 def runCMD(x):
     '''
@@ -103,10 +132,14 @@ def runCMD(x):
 
 def makeClusters(intersection):
     '''
+    takes a bedtools intersection with -wa -wb options and returns
+    a list of overlaps between -a and all -b
+
+    e.g. of intersection
+
     GL000008.2  164884  170271  .   0   -   GL000008.2  164884  170271  .   0   -
     '''
     mxeDict = dict()
-
     for i in intersection:
         left = "%s:%s-%s" % (i[0],i[1],i[2])
         right = "%s:%s-%s" % (i[6],i[7],i[8])
@@ -126,20 +159,53 @@ def checkFileExist(f):
         print("** ERR: %s file does not exist. **" % f, file=sys.stderr)
         sys.exit(1)
 
-def juncFilesFromManifest(manifest):
+def juncFilesFromManifest(manifest,tdir):
     '''function takes in 2 column manifest
     and returns list of file names (second column)'''
 
     beds = list()
-    try:
-        with open(manifest,'r') as lines:
-                for line in lines:
-                    sample, file = line.rstrip().split()
-                    beds.append(file)
-    except:
-        print("** ERR: %s expected 2 columns in manifest. Check format. **" % manifest, file=sys.stderr)
-        sys.exit(1)
+    with open(manifest,'r') as lines:
+        for line in lines:
+            data = line.rstrip().split("\t")
+            beds.append((data[1],tdir))
     return beds
+
+
+def filterJunctions(bed,filta,correct,genome):
+    '''
+    reads in junction bed file, and filters based on ss motif.
+    also resolves if true
+    '''
+    finalBed = str()
+    btJuncs = pybedtools.BedTool(bed)
+    dinucSeq = btJuncs.sequence(fi=genome, s=True, tab=True)
+    if correct:
+        print("** Under construction **",file=sys.stderr)
+        sys.exit(1)
+        with open(dinucSeq.seqfn) as fileObj:
+            for i in fileObj:
+                head,seq = i.split()
+                donor,acceptor = seq[:2].upper(),seq[-2:].upper()
+    else:
+        dinucSeq = btJuncs.sequence(fi=genome, s=True, tab=True)
+        acceptableDinucs = set(['GTAG'])
+        if filta == 'gc_at':
+            acceptableDinucs.add(['GTAG'])
+            acceptableDinucs.add(['ATAC'])
+
+        with open(dinucSeq.seqfn) as fileObj:
+            for i in fileObj:
+                head,seq = i.split()
+                l,strand = head.split("(")
+                seqID = l.replace("-",":")
+                seqID = seqID.split(":")
+                if filta == "all":
+                    finalBed += "%s\t%s\t%s\t%s\t%s\t%s\n" % (seqID[0],seqID[1],seqID[2],head,0,strand.rstrip(")"))
+                else:
+                    donor,acceptor = seq[:2].upper(),seq[-2:].upper()
+                    if donor+acceptor in acceptableDinucs:
+                        finalBed += "%s\t%s\t%s\t%s\t%s\t%s\n" % (seqID[0],seqID[1],seqID[2],head,0,strand.rstrip(")"))
+    return finalBed
 
 ########################################################################
 # Main
@@ -151,51 +217,63 @@ def main():
     '''
     TDB
     '''
+
+
+    
     myCommandLine = CommandLine()
     
     global minLengthThresh    
     global lengthThresh
     global readThresh
 
-    lengthThresh = myCommandLine.args["junction_length_max"]
-    minLengthThresh = myCommandLine.args["junction_length_min"]
-    readThresh = myCommandLine.args["junction_support_threshold"]
+    # filtering
+    minLengthThresh = myCommandLine.args["min_length"]
+    lengthThresh    = myCommandLine.args["max_length"]
+    readThresh      = myCommandLine.args["support_threshold"]
+    threads         = myCommandLine.args['threads']
+    
+    # required args
+    fPrefix = myCommandLine.args['out_prefix']
     bedList = myCommandLine.args['bed_manifest']
-    threads = myCommandLine.args['threads']
-    genome = myCommandLine.args['fasta_in']
+    genome  = myCommandLine.args['fasta_in']
+    ssFilter= myCommandLine.args['filter']
+    correct = myCommandLine.args['resolve_strands']
+
+
+    # initialize tempdir
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        print(tmpdirname)
+        # Collect junction bed files
+        beds = juncFilesFromManifest(bedList, tmpdirname)
+        # start worker pool
+        with Pool(threads) as p:
+            for fname in tqdm(p.imap_unordered(runCMD, beds), total=len(beds[:]), position=1, desc='1/2 Filtering sample junctions'):
+                continue
+        
+        #get list of temp files
+        flist = [os.path.join(tmpdirname, x) for x in os.listdir(tmpdirname)]
+        junctions = set()
+        with open('%s_junctions.bed' % fPrefix,'w') as fout:
+            for fname in tqdm(flist, total=len(flist),position=1, desc='2/2 Concatenating junctions' ):
+                with open(fname,'rb') as fin:
+                    for i in fin:
+                        if i in junctions:
+                            continue
+                        else:
+                            junctions.add(i)
+                            print(i.rstrip().decode(),file=fout)
+
+    # Filter junctions
+    filteredBed = filterJunctions('%s_junctions.bed' % fPrefix, ssFilter, correct, genome)
+    bTool = pybedtools.BedTool(filteredBed, from_string=True)
+    bTool.sort()
+    intersection = bTool.intersect(bTool, s=True, wa=True, wb=True)
+    bTool.saveas('%s_junctions.bed' % fPrefix)
+
     
-
-
-    # Collect junction bed files
-    beds = juncFilesFromManifest(bedList)
-    p = Pool(threads)
-
-    finalJunctionSet = set()
-    l = list()
-    for result in tqdm(p.imap_unordered(runCMD, beds[:]), total=len(beds[:])):
-        j = result
-        l.extend(j)
-        if sys.getsizeof(l, set()) > 2500000000:
-            finalJunctionSet = finalJunctionSet | set(l)
-            l.clear()
-
-
-
-    finalJunctionSet = finalJunctionSet | set(l)
-    print("\n%s bed files read successfully... %s unique junctions collected." % (len(beds),len(finalJunctionSet)), file=sys.stderr)
-
-
-    finalJunctions = list(finalJunctionSet)
-    bedObj = BedTool(finalJunctions).sort()
-    
-    intersection = bedObj.intersect(bedObj, s=True, wa=True, wb=True)
-
-    bedObj.saveas('all_junctions2.bed')
-    intersection.saveas('all_junctions_intersection2.bed')
-
     clusters = makeClusters(intersection)
 
-    with open("all_clusters2.tsv",'w') as out:
+    with open("%s_all_clusters2.tsv" % fPrefix,'w') as out:
         for i, c in clusters.items():
             print(i,",".join(c), file=out)
     print("done.", file=sys.stderr)
