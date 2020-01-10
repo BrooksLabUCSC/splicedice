@@ -22,6 +22,7 @@ import numpy as np
 from multiprocessing import Pool, Manager
 from scipy import stats
 from tqdm import *
+import psutil
 
 ########################################################################
 # CommandLine
@@ -53,17 +54,23 @@ class CommandLine(object) :
                                              prefix_chars = '-', 
                                              usage = '%(prog)s -m junction_beds_manifest.tsv -j step1_junctions.bed -c step1_clusters.bed ')
         # Add args
-        self.parser.add_argument('-m', '--bed_manifest',  type=str, action = 'store', required=True, help='List of bed files containing stranded junctions.')
+        self.parser.add_argument('-m', '--bed_manifest', type=str, action = 'store', required=True, help='List of bed files containing stranded junctions.')
         self.parser.add_argument('-j', '--junctions_bed', type=str, action = 'store', required=True, help='Junction bed file.')
-        self.parser.add_argument('--inclusion_thresh',    type=int, action = 'store', required=False, default=10, help='Filter events with less than N reads (default 10)')
-        self.parser.add_argument('--psi_thresh',          type=int, action = 'store', required=True, default=20, help='Do not compute PSI for samples with less than N reads (default 20)')
-        
-
         self.parser.add_argument('-c', '--clusters_table', type=str, action = 'store', required=True, help='cluster table tsv.')
         self.parser.add_argument('-o', '--output_prefix', type=str, action = 'store', required=True, help='Output prefix')
-        #self.parser.add_argument('-p', '--threads', type=int, action = 'store', required=False, default=1, help='threads.')
-        self.parser.add_argument('--compressed', action = 'store_true', required=False, default=False, help='NPZ compression')
+        self.parser.add_argument('-p', '--threads', type=int, action = 'store', required=False, default=1, help='threads.')
+        self.parser.add_argument('--uncompressed_only', action = 'store_false', required=False, default=True, help='NPZ compression')
+        self.parser.add_argument('--drimTable', action = 'store_true', required=False, default=False, help='Generate a table to use with DRIM-Seq.')
         
+
+        self.parser.add_argument('--inclusion_thresh',    type=int, action = 'store', required=False, default=10, help='Filter events with less than N reads (default 10)')
+        self.parser.add_argument('--psi_thresh',          type=int, action = 'store', required=False, default=20, help='Do not compute PSI for samples with less than N reads (default 20)')
+        
+
+             
+
+
+
         if inOpts is None :
             self.args = vars(self.parser.parse_args())
         else :
@@ -94,28 +101,12 @@ class Sample(object):
 # 
 ########################################################################
 
-def bedToEvents(f,sampleID):
-    '''
-    takes bed file and returns a dictionary
-    '''
-    sampleObj = Sample(sampleID)
-    
-    with open(f,'r') as lines: 
-        for line in lines:
-            cols = line.split()
-            name = "%s:%s-%s" % (cols[0],cols[1],cols[2])
-            if name in junctionSet:
-                sampleObj.introns[name] = int(cols[4])
-            
-    return sampleObj
+def memory_usage_psutil():
+    # return the memory usage in MB
+    process = psutil.Process(os.getpid())
+    mem = process.memory_info()[0] / float(1024.0 ** 2)
+    return mem
 
-def runCMD1(x):
-    '''
-    mutiprocessing helper function to run
-    multiple instances of bedToCoordSet
-    '''
-    root, bed= x
-    return bedToEvents(bed,root)
 
 def runCMD2(x):
     '''
@@ -125,16 +116,22 @@ def runCMD2(x):
     return clusterQuant(x)
 
 
-def clusterQuant(intron):
+def clusterQuant(data):
     '''
     stuff
     '''
-    intron, samples = intron
-    for x in samples:
-        inclusion = x.introns.get(intron.name,0)
-        exclusion = sum([x.introns.get(y,0) for y in intron.mxes])
-        intron.quant.append("%s:%s" % (inclusion,exclusion))
-    return intron
+    root, fname, order = data
+
+    order = np.load(order)['introns']
+    d = {x:np.nan for x in order}
+    with open(fname) as fin:
+        for i in fin:
+
+            cols = i.rstrip().split()
+            intronID = "%s:%s-%s" % (cols[0],cols[1],cols[2])
+            if intronID in d:
+                d[intronID] = int(cols[4])
+    return [root, np.array([d[x] for x in order], dtype=np.float32 )]
 
 
 ########################################################################
@@ -152,103 +149,112 @@ def main():
     bedList     = myCommandLine.args['bed_manifest']
     junctionBed = myCommandLine.args['junctions_bed']
     clusters    = myCommandLine.args['clusters_table']
-    comp        = myCommandLine.args['compressed']
+    comp        = myCommandLine.args['uncompressed_only']
     outPrefix   = myCommandLine.args['output_prefix']
+    threads     = myCommandLine.args['threads']
     incT = myCommandLine.args['inclusion_thresh']
     psiT = myCommandLine.args['psi_thresh']
-
+    drim = myCommandLine.args['drimTable']
     # Get list of bed file names for multiprocessing step.
     beds   = list()
-    groups = dict()
     with open(bedList,'r') as fnames:
-        #next(fnames)
         for num,fdata in enumerate(fnames,0):
             root,fname,group1,group2 = fdata.rstrip().split("\t")
             group1,group2 = group1.replace(" ",""), group2.replace(" ","")
-            beds.append((root,fname))
-            if (group1,group2) not in groups:
-                groups[(group1,group2)] = list()
-            
-            groups[(group1,group2)].append(int(num))
-
-    # Make junctionSet global for later steps.
-    global junctionSet
-    junctionSet = dict()
+            beds.append((root,fname,'order.npz'))
 
     # Make junction objects
     n = 0
+    order = list()
+    orderDict = dict()
     with open(junctionBed,'r') as lines:
         for line in tqdm(lines, desc="Initializing junction counts", position=1):
             j = line.rstrip().split()
             c1, c2 = map(int, [j[1], j[2]])
             jid = "%s:%s-%s" % (j[0],j[1],j[2])
-            junctionSet[jid] = Junction(j[0], c1, c2,j[5])
-            junctionSet[jid].quant = np.zeros(len(beds), dtype=int)
+            order.append(jid)
+            orderDict[jid] = n
             n += 1
 
+    # this compressed order array will be used to re-order junction counts
+    # from individual bed files
+    order = np.array(order)
+    np.savez_compressed('order.npz',introns=order)
+    allData = list()
+    samps  = list()
+    with Pool(threads) as p:
+        for i in tqdm(p.imap_unordered(runCMD2, beds), total=len(beds), desc="Computing counts", position = 1):
+            allData.append(i[-1])
+            samps.append(i[0])
 
-    num = 0
-    for bed in tqdm(beds[:], total=len(beds[:]), desc="Quantifying junction usage per sample", position=1):
-        root,fname = bed
-        with open(fname,'r') as lines:
-            for line in lines:
-                cols = line.split()
-                name = "%s:%s-%s" % (cols[0],cols[1],cols[2])
-                if name in junctionSet:
-                    obj = junctionSet[name]
-                    obj.quant[num] = int(cols[4])
-                else:
-                    continue
-        num += 1
-                
-
-    dataQ = list()
-    dataP = list()
+    #print("current mem %s" % memory_usage_psutil())
+    allData = np.nan_to_num(np.transpose(np.array(allData)))
+    #print(allData.shape)
+    
+    dataQ  = list()
+    dataP  = list()
     events = list()
-    beds = np.array(beds)
-    if not comp:
-        incOut = open('%s_inclusionCounts.tsv' % outPrefix ,'w')
-        psiOut = open('%s_allPSI.tsv' % outPrefix ,'w')
-        print("\t".join(beds[:,0]),"cluster",sep="\t",file=incOut)
-        print("\t".join(beds[:,0]),"cluster",sep="\t",file=psiOut)
+    incOut  = open('%s_inclusionCounts.tsv' % outPrefix ,'w')
+    psiOut  = open('%s_allPSI.tsv' % outPrefix ,'w')
 
+    if drim: 
+        drimOut = open('%s_drimTable.tsv' % outPrefix ,'w')
+    
+    print("\t".join(samps),"cluster",sep="\t",file=incOut)
+    print("\t".join(samps),"cluster",sep="\t",file=psiOut)
+    
+    if drim:
+        print("gene","feature_id","\t".join(samps),sep="\t",file=drimOut)
+
+    cluster_num = 0
     with open(clusters,'r') as lines:
         for line in tqdm(lines,  desc="Compute inclusion/exclusion counts", position=1):
             intron, mxes = line.rstrip().split()
             mxes = mxes.split(",")
             
-            inclusions = junctionSet[intron].quant
-            exclusions = np.asarray([junctionSet[name].quant for name in mxes])
+            intronPos = orderDict[intron]
+            mxePos = [orderDict[x] for x in mxes]
+
+            inclusions = allData[intronPos]
+            exclusions = allData[mxePos]
 
             total = exclusions.sum(axis=0) + inclusions
 
             # lets filter...
 
-            if np.max(inclusions)<incT:
-                continue
+            # if np.max(inclusions)<incT:
+            #     continue
 
             events.append(intron)
-            quants = np.asarray(["%s:%s" % (x[0],x[1]) for x in zip(inclusions,total)])
             psiQuants = inclusions/total
             psiQuants[total < psiT] = np.nan 
-            dataQ.append(quants)
+            dataQ.append(inclusions)
             dataP.append(psiQuants)
-            if not comp:
-                print("\t".join("%.2f" % x for x in psiQuants), intron, sep="\t", file=psiOut)
-                print("\t".join(quants), intron, sep="\t", file=incOut)
+            
+            print("\t".join("%.2f" % x for x in psiQuants), intron, sep="\t", file=psiOut)
+            print("\t".join(str(x) for x in inclusions), intron, sep="\t", file=incOut)
+
+            if drim:
+                print("cl_%s_%s\t%s_%s" % (cluster_num,intron,intron,cluster_num), "\t".join(str(x) for x in inclusions), sep="\t", file=drimOut)
+                # print other intron values too
+                for mxeNum, x in enumerate(exclusions):
+                    print("cl_%s_%s\t%s_%s" % (cluster_num,intron,mxes[mxeNum],cluster_num), "\t".join(str(y) for y in x), sep="\t", file=drimOut)
+                
+            cluster_num += 1
+
+    cols,rows,data1 = np.array(samps), np.array(events), np.array(dataQ)
+    data2 = np.array(dataP,dtype=np.float32)
+    
     if comp:
-        cols,rows,data1 = np.array(beds), np.array(events), np.array(dataQ)
-        data2 = np.array(dataP,dtype=np.float32)
         np.savez_compressed("%s_inclusionCounts.npz" % outPrefix,cols=cols,rows=rows,data=data1)
         np.savez_compressed("%s_allPSI.npz" % outPrefix ,cols=cols,rows=rows,data=data2)
 
-    if not comp:
-        incOut.close()
-        psiOut.close()
+    incOut.close()
+    psiOut.close()
+    drimOut.close()
 
 
-
-    print()
+    #print()
 
 if __name__ == "__main__":
     main()      
