@@ -106,11 +106,11 @@ def bedToCoordSet(f):
     '''
     takes bed file and returns a set of junctions
     '''
-    fname, tdir = f
+    sampName, fname, tdir = f
     newOut = fname.split("/")[-1]
-    outName = os.path.join(tdir,"%s.tmp" % newOut)
+    outName = os.path.join(tdir,"%s.tmp" % sampName)
     jSet = set()
-    with open(outName,'wb+') as fout:
+    with open(outName,'w') as fout:
         with open(fname,'r') as lines:
             for line in lines:
                 cols = line.rstrip().split()
@@ -119,8 +119,8 @@ def bedToCoordSet(f):
                 if score<readThresh or c2 - c1 > lengthThresh:
                     continue
                 cols[4] = '0'
-                outString = str.encode("\t".join(cols[:6]) + "\n")
-                fout.write(outString)
+                
+                print("\t".join(cols[:6]), file=fout)
 
 
 def runCMD(x):
@@ -167,7 +167,7 @@ def juncFilesFromManifest(manifest,tdir):
     with open(manifest,'r') as lines:
         for line in lines:
             data = line.rstrip().split("\t")
-            beds.append((data[1],tdir))
+            beds.append((data[0],data[1],tdir))
     return beds
 
 
@@ -262,7 +262,6 @@ def main():
                         else:
                             junctions.add(i)
                             print(i.rstrip().decode(),file=fout)
-
     # Filter junctions
     filteredBed = filterJunctions('%s_junctions.bed' % fPrefix, ssFilter, correct, genome)
     bTool = pybedtools.BedTool(filteredBed, from_string=True)
