@@ -2,7 +2,7 @@
 
 
 ########################################################################
-# File: compareSampleSets.py
+# File: pair-wise_fisher.py
 #  executable: 
 # Purpose: 
 #
@@ -18,7 +18,8 @@
 
 import os, sys
 import numpy as np
-from scipy.stats import ranksums
+from scipy.stats import fisher_exact
+from scipy.stats import chi2_contingency
 from statsmodels.stats.multitest import multipletests
 ########################################################################
 # CommandLine
@@ -48,12 +49,12 @@ class CommandLine(object) :
                                              epilog = 'Please feel free to forward any usage questions or concerns', 
                                              add_help = True, #default is True 
                                              prefix_chars = '-', 
-                                             usage = '%(prog)s -m1 manifest1.txt -m2 manifest2.txt')
+                                             usage = '%(prog)s --psiMESA psis.npz')
         # Add args
-        self.parser.add_argument('--psiMESA', type=str, action = 'store', required=True, help='Compressed NPZ formatted PSI matrix from quantMESA.')
-        self.parser.add_argument('-m1', '--manifest1', type=str, action = 'store', required=True, help='Manifest containing samples for sample set group1')
-        self.parser.add_argument('-m2', '--manifest2' , type=str, action = 'store', required=True,  help='Manifest containing samples for sample set group2')
-        self.parser.add_argument('-o', '--out_prefix' , type=str, action = 'store', required=False, help='Prefix for output file.')
+        self.parser.add_argument('--psiMESA', type=str, action = 'store', required=True, help='Compressed NPZ formatted PSI matrix from quantMESA.') 
+        self.parser.add_argument('-c','--clusters', type=str, action = 'store', required=True, help='Clusters table.') 
+        self.parser.add_argument('--chi2', action = 'store_true', default=False,  help='Use X^2 instead of fishers. Quicker, not as sensitive.') 
+        
         
         if inOpts is None :
             self.args = vars(self.parser.parse_args())
@@ -100,6 +101,14 @@ def returnSamplesFromManifest(x):
 
     return s
 
+def getClust(fname):
+    data = dict()
+    with open(fname) as fin:
+        for i in fin:
+            left,right = i.rstrip().split()
+            mxes = right.split(",")
+            data[left] = mxes + [left]
+    return data
 ########################################################################
 # MAINE
 # 
@@ -118,52 +127,82 @@ def main():
 
     # args
     pmesa  = myCommandLine.args["psiMESA"]
-    group1 = myCommandLine.args["manifest1"]
-    group2 = myCommandLine.args["manifest2"]
+    cmesa  = myCommandLine.args["clusters"]
+    x  = myCommandLine.args["chi2"]
     prefix = myCommandLine.args['out_prefix']
     
-    # get sample lists
-    g1 = returnSamplesFromManifest(group1)
-    g2 = returnSamplesFromManifest(group2)
-
-    if len(g1) < 3 or len(g2) < 3:
-        print("Cannot conduct wilcoxon with less than 3 samples in either group. Exit.", file=sys.stderr)
-        sys.exit(1)
-
-
     #load psi
     data = loadNPZ(pmesa)
+
+    clusters = getClust(cmesa)
 
     #table has 3 arrays, cols, rows and data
     cols, rows, matrix = data['cols'], data['rows'], data['data']
 
-    # get sample indices
-    g1Indices = getColIndexFromArray(g1,cols)
-    g2Indices = getColIndexFromArray(g2,cols)
 
+    comparisons = set()
+    for i,v in enumerate(cols):
+        for j,v in enumerate(cols):
+            if i == j:
+                continue
+            comparisons.add(tuple(sorted([i,j])))
+    
+    # 
+    
     # do the math
+    comps = list(comparisons)
+
+    print("clusterID","\t".join("%s_%s" % (cols[j[0]],cols[j[1]]) for j in comps), sep="\t")
+
     pvals = list()
     testedEvents = list()
+    if not x:
+        for n,vals in enumerate(matrix):
+            eventID = rows[n]
+            mxes = matrix[np.isin(rows,clusters[eventID])]
+            
 
-    for n,event in enumerate(matrix):
-        d1, d2 = event[g1Indices], event[g2Indices]
-        nonans1 = np.invert(np.isnan(d1))
-        nonans2 = np.invert(np.isnan(d2))
-        data1 = d1[nonans1] 
-        data2 = d2[nonans2]
-        
-        if len(data1) < 3 or len(data2) < 3:
-            continue
+            inc = vals
+            exc = np.sum(mxes,axis=0)
+            
+            tempPvals = list()
+            
+            for i in comps:
+                left,right = i
+                table = [[inc[left],inc[right]],
+                         [exc[left],exc[right]]]
 
-        D, pval = ranksums(d1, d2)
-        testedEvents.append((rows[n],np.mean(data1)-np.mean(data2)))
-        pvals.append(pval)
+                data = fisher_exact(table)[-1]
+                tempPvals.append(data)
 
-    
-    # correct pvals
-    corrected = multipletests(pvals,method="fdr_bh")[1]
-    for n,i in enumerate(testedEvents):
-        print(pvals[n],corrected[n],i[0],i[1])
+            
+            print(eventID,"\t".join(str(x) for x in tempPvals),sep="\t")
+    else:
+        for n,vals in enumerate(matrix):
+            eventID = rows[n]
+            mxes = matrix[np.isin(rows,clusters[eventID])]
+            
+
+            inc = vals
+            exc = np.sum(mxes,axis=0)
+            
+            tempPvals = list()
+            
+            for i in comps:
+                left,right = i
+                
+                table = [[inc[left],inc[right]],
+                         [exc[left],exc[right]]]
+                try:
+                    data = chi2_contingency(table)[1]
+                except:
+                    # not enough data for text
+                    data = np.nan
+                tempPvals.append(data)
+
+            
+            print(eventID,"\t".join(str(x) for x in tempPvals),sep="\t")
+
 
 if __name__ == "__main__":
     main()
