@@ -2,7 +2,7 @@
 
 
 ########################################################################
-# File: pair-wise_fisher.py
+# File: pairwise_fisher.py
 #  executable: 
 # Purpose: 
 #
@@ -51,7 +51,7 @@ class CommandLine(object) :
                                              prefix_chars = '-', 
                                              usage = '%(prog)s --psiMESA psis.npz')
         # Add args
-        self.parser.add_argument('--psiMESA', type=str, action = 'store', required=True, help='Compressed NPZ formatted PSI matrix from quantMESA.') 
+        self.parser.add_argument('--inclusionMESA', type=str, action = 'store', required=True, help='Compressed NPZ formatted Inclusion count matrix from quantMESA.') 
         self.parser.add_argument('-c','--clusters', type=str, action = 'store', required=True, help='Clusters table.') 
         self.parser.add_argument('--chi2', action = 'store_true', default=False,  help='Use X^2 instead of fishers. Quicker, not as sensitive.') 
         
