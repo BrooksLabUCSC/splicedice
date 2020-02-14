@@ -259,7 +259,7 @@ def getColorMarkers(data, cols):
 		key = (val1Ind,val2Ind)
 		if key not in sampsPlots:
 			sampsPlots[key] = list()
-		sampsPlots[key].append((matrixColumnInd,"%s_%s" % (g1[val1Ind],g1[val2Ind])))
+		sampsPlots[key].append((matrixColumnInd,"%s_%s" % (g1[val1Ind],g2[val2Ind])))
 
 	return colors,markers, sampsPlots
 
