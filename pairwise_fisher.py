@@ -49,7 +49,7 @@ class CommandLine(object) :
                                              epilog = 'Please feel free to forward any usage questions or concerns', 
                                              add_help = True, #default is True 
                                              prefix_chars = '-', 
-                                             usage = '%(prog)s --psiMESA psis.npz')
+                                             usage = '%(prog)s --inclusionMESA psis.npz')
         # Add args
         self.parser.add_argument('--inclusionMESA', type=str, action = 'store', required=True, help='Compressed NPZ formatted Inclusion count matrix from quantMESA.') 
         self.parser.add_argument('-c','--clusters', type=str, action = 'store', required=True, help='Clusters table.') 
@@ -126,10 +126,9 @@ def main():
     myCommandLine = CommandLine()
 
     # args
-    pmesa  = myCommandLine.args["psiMESA"]
+    pmesa  = myCommandLine.args["inclusionMESA"]
     cmesa  = myCommandLine.args["clusters"]
     x  = myCommandLine.args["chi2"]
-    prefix = myCommandLine.args['out_prefix']
     
     #load psi
     data = loadNPZ(pmesa)
@@ -146,8 +145,7 @@ def main():
             if i == j:
                 continue
             comparisons.add(tuple(sorted([i,j])))
-    
-    # 
+
     
     # do the math
     comps = list(comparisons)
