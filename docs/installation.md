@@ -14,5 +14,8 @@ layout: default
 * multiprocessing
 * tqdm
 * scipy
+* pybedtools
+* matplotlib
+* sklearn
 
 ### [Go Home](./) or [Go to Usage Guide](./quick_usage.html)
