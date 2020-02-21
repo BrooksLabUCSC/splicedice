@@ -69,7 +69,8 @@ head(proportions(d))
 
 head(coefficients(d), level = "feature")
 
-d <- dmTest(d, coef = "groupunstim", verbose = 1,
+coef_str <- paste("group", levels(samples$group)[1])
+d <- dmTest(d, coef = coef_str, verbose = 1,
             BPPARAM = BiocParallel::MulticoreParam(threads))
 
 head(results(d), 3)
