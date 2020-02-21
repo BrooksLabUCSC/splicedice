@@ -412,4 +412,5 @@ def run_with(args):
 
     incOut.close()
     psiOut.close()
-    drimOut.close()
+    if drim:
+        drimOut.close()
