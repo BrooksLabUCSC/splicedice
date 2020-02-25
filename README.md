@@ -94,7 +94,6 @@ grouped and the statistical analysis uses the different groups to compare.
 
 An example of the manifest format can be found [here](data/example_manifest.tsv).
 
-<<<<<<< HEAD
 ### Analyzing DRIMSeq output
 `mesa quant` can provide its output in a format for use with with the
 alternative splicing quantifier tool DRIMSeq in the R programming language.
@@ -116,9 +115,6 @@ This script will automatically output a number of plots and an output table for
 further analyzing splicing data. The `-t` parameter sets the number of threads
 to be used, and we recommend setting it as high as you can because DRIMSeq is a
 cpu-intensive tool.
-
-=======
->>>>>>> c700c7c3ece4c4450f9b02565f1dfe5f9179dfee
 
 ## Contributing
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
