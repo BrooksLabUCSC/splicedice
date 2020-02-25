@@ -38,14 +38,39 @@ $ mesa star_junc_to_bed -s sj.tab
 ```
 
 ### `mesa quant`
+Processes STAR junction bed files and genome to produce output for later steps.
+For information on the `bed_manifest.txt` format, see [Manifest Format](#manifest-format).
 ```bash
-$ mesa quant -m bed_manifest.tsv -g genome.fa -o my_output
+$ mesa quant -m bed_manifest.txt -g genome.fa -o my_output
 ```
 
 #### Additional options
 todo example sub arguments
 
+#### Output files
+Based on the `-o/--output_prefix` parameter, `mesa quant` will output a number
+of files for further processing.
+- `{output_prefix}_allPSI.npz`: a numpy output file containing various
+  information from `mesa quant`
+- `{output_prefix}_all_clusters2.tsv`
+- `{output_prefix}_inclusionCounts.tsv`
+- `{output_prefix}_junctions.bed`
+- `order.npz`
+- `{output_prefix}_drimTable.tsv`: If the `--drim-table` option was passed, it
+  will output its data in a format for use with DRIMSeq. See [Analyzing DRIMSeq
+  output](#analyzing-drimseq-output) for how to analyze this data with a
+  provided script.
+
 ### `mesa compare_sample_sets`
+Compares the differences in splicing across two groups. Requires atleast 3
+samples per condition, otherwise it will fail. If you have less than 3 samples
+per condition, use `mesa parwise`.
+```bash
+$ mesa compare_sample_sets --psiMESA my_output_allPSI.npz -m1 ctrl_manifest.txt -m2 mut_manifest.txt
+```
+This module will take two manifest files, that represents the two groups you
+wish to compare as well as the allPSI.npz file that was previously outputted by
+`mesa quant`. TODO what is the output
 
 ### `mesa pairwise`
 
@@ -69,6 +94,31 @@ grouped and the statistical analysis uses the different groups to compare.
 
 An example of the manifest format can be found [here](data/example_manifest.tsv).
 
+<<<<<<< HEAD
+### Analyzing DRIMSeq output
+`mesa quant` can provide its output in a format for use with with the
+alternative splicing quantifier tool DRIMSeq in the R programming language.
+MESA provides a utility script [run-drim-seq.R](scripts/run-drim-seq.R). This
+script depends on:
+- R todo double check dependencies
+- DRIMSeq
+- ggplot2
+- optparse
+
+An example command to run our DRIMSeq script is shown below
+```
+$ Rscript run-drim-seq.R -m bed_manifest.tsv -d drim_table.tsv -o drim_output -t 12
+```
+
+TODO explain various plots and data output
+
+This script will automatically output a number of plots and an output table for
+further analyzing splicing data. The `-t` parameter sets the number of threads
+to be used, and we recommend setting it as high as you can because DRIMSeq is a
+cpu-intensive tool.
+
+=======
+>>>>>>> c700c7c3ece4c4450f9b02565f1dfe5f9179dfee
 
 ## Contributing
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
