@@ -92,6 +92,12 @@ wish to compare as well as the allPSI.npz file that was previously outputted by
 
 ### `mesa pairwise`
 
+Example command:
+
+```bash
+$ mesa pairwise --inclusionMESA my_output_inclusionCounts.npz -c my_output_all_clusters2.tsv >pairwise_output.txt
+```
+
 ### `mesa cluster`
 
 ## Manifest Format
