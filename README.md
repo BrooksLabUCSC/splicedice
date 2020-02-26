@@ -91,12 +91,20 @@ wish to compare as well as the allPSI.npz file that was previously outputted by
 `mesa quant`. TODO what is the output
 
 ### `mesa pairwise`
-
 Example command:
 
 ```bash
 $ mesa pairwise --inclusionMESA my_output_inclusionCounts.npz -c my_output_all_clusters2.tsv >pairwise_output.txt
 ```
+
+This command performs a pairwise comparison of the junction usage for each
+sample against each other. `pairwise_output.txt`, from the command above, will
+output the p-value from running a Fisher's exact test, where the contingency
+matrix is inclusion and exclusion read counts for each pair of samples for a
+given junction. This command is recommend for datasets with less than three
+samples per group where `mesa compare_sample_sets` could not be used.
+
+todo example output and explanation
 
 ### `mesa cluster`
 
