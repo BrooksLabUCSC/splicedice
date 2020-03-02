@@ -3,6 +3,24 @@ MESA (**M**utually **E**xclusive **S**plicing **A**nalysis) is a tool for detect
 by mutually exclusive junctions.  This tool is currently in development and
 user discretion is advised.
 
+## Table of Contents
+  * [Dependencies](#dependencies)
+  * [Installation](#installation)
+    + [Development](#development)
+  * [Usage](#usage)
+    + [Alignment with star](#alignment-with-star)
+    + [`mesa star_junc_to_bed`](#mesa-star_junc_to_bed)
+    + [`mesa quant`](#mesa-quant)
+      - [Additional options](#additional-options)
+      - [Output files](#output-files)
+    + [`mesa compare_sample_sets`](#mesa-compare_sample_sets)
+    + [`mesa pairwise`](#mesa-pairwise)
+    + [`mesa cluster`](#mesa-cluster)
+  * [Manifest Format](#manifest-format)
+  * [Analyzing DRIMSeq output](#analyzing-drimseq-output)
+  * [Contributing](#contributing)
+  * [License](#license)
+
 ## Dependencies
 - STAR aligner
 - bedtools
@@ -73,6 +91,20 @@ wish to compare as well as the allPSI.npz file that was previously outputted by
 `mesa quant`. TODO what is the output
 
 ### `mesa pairwise`
+Example command:
+
+```bash
+$ mesa pairwise --inclusionMESA my_output_inclusionCounts.npz -c my_output_all_clusters2.tsv >pairwise_output.txt
+```
+
+This command performs a pairwise comparison of the junction usage for each
+sample against each other. `pairwise_output.txt`, from the command above, will
+output the p-value from running a Fisher's exact test, where the contingency
+matrix is inclusion and exclusion read counts for each pair of samples for a
+given junction. This command is recommend for datasets with less than three
+samples per group where `mesa compare_sample_sets` could not be used.
+
+todo example output and explanation
 
 ### `mesa cluster`
 
@@ -80,7 +112,7 @@ wish to compare as well as the allPSI.npz file that was previously outputted by
 The manifest is a tab-delimitted file used by `mesa` provides information about
 the samples and related files.
 ```bash
-$ cat manifest.tsv
+$ cat manifest.txt
 sample1 /path/to/sample1/sj.tab.bed lung control
 sample2 /path/to/sample2/sj.tab.bed lung control
 sample3 /path/to/sample3/sj.tab.bed lung mutant
@@ -92,9 +124,9 @@ sample4 /path/to/sample4/sj.tab.bed lung mutant
 - The fourth column is the condition. This is used to decide how the samples are
 grouped and the statistical analysis uses the different groups to compare.
 
-An example of the manifest format can be found [here](data/example_manifest.tsv).
+An example of the manifest format can be found [here](data/example_manifest.txt).
 
-### Analyzing DRIMSeq output
+## Analyzing DRIMSeq output
 `mesa quant` can provide its output in a format for use with with the
 alternative splicing quantifier tool DRIMSeq in the R programming language.
 MESA provides a utility script [run-drim-seq.R](scripts/run-drim-seq.R). This
@@ -106,7 +138,7 @@ script depends on:
 
 An example command to run our DRIMSeq script is shown below
 ```
-$ Rscript run-drim-seq.R -m bed_manifest.tsv -d drim_table.tsv -o drim_output -t 12
+$ Rscript run-drim-seq.R -m bed_manifest.txt -d drim_table.tsv -o drim_output -t 12
 ```
 
 TODO explain various plots and data output

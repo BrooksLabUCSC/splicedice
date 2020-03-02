@@ -14,10 +14,12 @@ parser <- OptionParser()
 parser <- add_option(parser, c("-m", "--manifest"))
 parser <- add_option(parser, c("-d", "--drim-table"))
 parser <- add_option(parser, c("-o", "--output"))
+parser <- add_option(parser, c("-c", "--ctrl"))
 parser <- add_option(parser, c("-t", "--threads"), type="integer", default=1)
 
 args <- parse_args(parser, convert_hyphens_to_underscores = TRUE)
 manifest_filename <- args$manifest
+ctrl <- args$ctrl
 drim_table_filename <- args$drim_table
 output_filename <- args$output
 threads <- args$threads
@@ -69,7 +71,7 @@ head(proportions(d))
 
 head(coefficients(d), level = "feature")
 
-coef_str <- paste("group", levels(samples$group)[1])
+coef_str <- paste("group", ctrl, sep="")
 d <- dmTest(d, coef = coef_str, verbose = 1,
             BPPARAM = BiocParallel::MulticoreParam(threads))
 
