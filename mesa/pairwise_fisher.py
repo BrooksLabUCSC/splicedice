@@ -21,64 +21,6 @@ import numpy as np
 from scipy.stats import fisher_exact
 from scipy.stats import chi2_contingency
 
-########################################################################
-# CommandLine
-########################################################################
-
-
-class CommandLine(object):
-    """
-    Handle the command line, usage and help requests.
-    CommandLine uses argparse, now standard in 2.7 and beyond.
-    it implements a standard command line argument parser with various argument
-    options, and a standard usage and help,
-    attributes:
-    myCommandLine.args is a dictionary which includes each of the available
-    command line arguments as myCommandLine.args['option']
-    """
-
-    def __init__(self, inOpts=None):
-        """
-        CommandLine constructor.
-        Implements a parser to interpret the command line argv string using argparse.
-        """
-        import argparse
-
-        self.parser = argparse.ArgumentParser(
-            description="TBD",
-            epilog="Please feel free to forward any usage questions or concerns",
-            add_help=True,  # default is True
-            prefix_chars="-",
-            usage="%(prog)s --inclusionMESA psis.npz",
-        )
-        # Add args
-        self.parser.add_argument(
-            "--inclusionMESA",
-            type=str,
-            action="store",
-            required=True,
-            help="Compressed NPZ formatted Inclusion count matrix from quantMESA.",
-        )
-        self.parser.add_argument(
-            "-c",
-            "--clusters",
-            type=str,
-            action="store",
-            required=True,
-            help="Clusters table.",
-        )
-        self.parser.add_argument(
-            "--chi2",
-            action="store_true",
-            default=False,
-            help="Use X^2 instead of fishers. Quicker, not as sensitive.",
-        )
-
-        if inOpts is None:
-            self.args = vars(self.parser.parse_args())
-        else:
-            self.args = vars(self.parser.parse_args(inOpts))
-
 
 ########################################################################
 # Helper Functions
