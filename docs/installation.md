@@ -8,6 +8,7 @@ layout: default
 
 * python v. 3.4+
 * r v. ?.??
+* bedtools
 
 #### python modules
 * numpy
