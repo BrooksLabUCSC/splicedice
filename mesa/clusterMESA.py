@@ -237,17 +237,15 @@ def loadNPZ(x):
 # Main
 ########################################################################
 
-def add_parser(subparser):
-    cluster_parser = subparser.add_parser("cluster")
-    cluster_parser.add_argument(
+def add_parser(parser):
+    parser.add_argument(
         "--psiMESA",
         type=str,
         action="store",
         required=False,
         help="Compressed NPZ formatted PSI matrix from quantMESA.",
     )
-    cluster_parser.add_argument("-m", "--manifest", required=True,)
-    cluster_parser.set_defaults(func=run_with)
+    parser.add_argument("-m", "--manifest", required=True,)
 
 
 def run_with(args):

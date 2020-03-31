@@ -70,29 +70,27 @@ def returnSamplesFromManifest(x):
 #
 ########################################################################
 
-def add_parser(subparser):
-    css_parser = subparser.add_parser("compare_sample_sets")
-    css_parser.add_argument(
+def add_parser(parser):
+    parser.add_argument(
         "--psiMESA",
         type=str,
         required=True,
         help="Compressed NPZ formatted PSI matrix from 'mesa quant'.",
     )
-    css_parser.add_argument(
+    parser.add_argument(
         "-m1",
         "--manifest1",
         type=str,
         required=True,
         help="Manifest containing samples for sample set group1",
     )
-    css_parser.add_argument(
+    parser.add_argument(
         "-m2",
         "--manifest2",
         type=str,
         required=True,
         help="Manifest containing samples for sample set group2",
     )
-    css_parser.set_defaults(func=run_with)
 
 
 def run_with(args):

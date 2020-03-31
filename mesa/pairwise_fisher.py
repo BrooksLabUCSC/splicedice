@@ -16,6 +16,7 @@
 # Hot Imports & Global Variable
 ########################################################################
 
+import argparse
 import sys
 import numpy as np
 from scipy.stats import fisher_exact
@@ -43,6 +44,28 @@ def loadNPZ(x):
     return data
 
 
+def getColIndexFromArray(x, y):
+    """
+    takes in list of strings = x
+    and finds list index in array = y
+    """
+
+    return np.nonzero(np.isin(y, x))
+
+
+def returnSamplesFromManifest(x):
+    """
+    reads in mesa formatted manifest
+    returns list of samples
+    """
+    s = list()
+    with open(x) as fin:
+        for i in fin:
+            s.append(i.split()[0])
+
+    return s
+
+
 def getClust(fname):
     data = dict()
     with open(fname) as fin:
@@ -59,35 +82,33 @@ def getClust(fname):
 #
 ########################################################################
 
-def add_parser(subparser):
-    pairwise_parser = subparser.add_parser("pairwise")
-    pairwise_parser.add_argument(
+def add_parser(parser):
+    parser.add_argument(
         "--inclusionMESA",
         type=str,
         required=True,
         help="Compressed NPZ formatted Inclusion count matrix from quantMESA.",
     )
-    pairwise_parser.add_argument(
+    parser.add_argument(
         "-c",
         "--clusters",
         type=str,
         required=True,
         help="Clusters table.",
     )
-    pairwise_parser.add_argument(
+    parser.add_argument(
         "--chi2",
         action="store_true",
         default=False,
         help="Use X^2 instead of fishers. Quicker, not as sensitive.",
     )
-    pairwise_parser.add_argument(
+    parser.add_argument(
         "--no-correction",
         action="store_true",
         default=False,
         help="Output raw p-values instead of corrected ones. Correction is "
         "done via Benjamini-Hochberg",
     )
-    pairwise_parser.set_defaults(func=run_with)
 
 
 def run_with(args):
@@ -139,3 +160,14 @@ def run_with(args):
         if not args.no_correction:
             pvalues = multipletests(pvalues, method="fdr_bh")
         print(event_id, "\t".join(str(x) for x in pvalues), sep="\t")
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    add_parser(parser)
+    args = parser.parse_args()
+    run_with(args)
+
+
+if __name__ == "__main__":
+    main()

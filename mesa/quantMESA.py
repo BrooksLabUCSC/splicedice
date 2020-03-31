@@ -35,83 +35,81 @@ def is_valid_filter(parser, arg):
         return arg
 
 
-def add_parser(subparser):
+def add_parser(parser):
     """Add parsing options for quant module of MESA"""
-    quant_parser = subparser.add_parser("quant")
-    quant_parser.add_argument(
+    parser.add_argument(
         "-m",
         "--manifest",
         required=True,
         help="List of bed files containing stranded junctions.",
     )
-    quant_parser.add_argument("-g", "--genome", required=True)
-    quant_parser.add_argument("-o", "--output-prefix", required=True)
+    parser.add_argument("-g", "--genome", required=True)
+    parser.add_argument("-o", "--output-prefix", required=True)
 
     # TODO can use choices parameter to avoid invalidation
-    quant_parser.add_argument(
+    parser.add_argument(
         "--filter",
         default="gtag_only",
-        type=lambda x: is_valid_filter(subparser, x),
+        type=lambda x: is_valid_filter(parser, x),
         help="Filter splice sites that\n"
         'filter non GT-AG splice sites : "gtag_only" (default),\n'
         'filter non GT/GC-AG and AT-AC introns: "gc_at",\n'
         'keep all splice sites: "all"',
     )
-    quant_parser.add_argument(
+    parser.add_argument(
         "--drim-table", default=False, action="store_true", help="Generate a table to use with DRIM-Seq."
     )
-    quant_parser.add_argument(
+    parser.add_argument(
         "--resolve-strands",
         action="store_true",
         default=False,
         help="Resolve splice site strand based on dinucleotide.",
     )
-    quant_parser.add_argument(
+    parser.add_argument(
         "--support-threshold",
         default=10,
         type=int,
         help="Filter junctions < non-normalized read counts (10)",
     )
-    quant_parser.add_argument(
+    parser.add_argument(
         "--max-length",
         default=50000,
         type=int,
         help="Filter junctions > N length (50,000)",
     )
-    quant_parser.add_argument(
+    parser.add_argument(
         "--min-length", default=50, type=int, help="Filter junctions < N length (50)"
     )
-    quant_parser.add_argument(
+    parser.add_argument(
         "--min-samp-threshold",
         default=0.01,
         type=float,
         help="Filter junctions found in < N samples (0.1)",
     )
 
-    quant_parser.add_argument(
+    parser.add_argument(
         "--uncompressed-only",
         action="store_false",
         required=False,
         default=True,
         help="NPZ compression",
     )
-    quant_parser.add_argument(
+    parser.add_argument(
         "-p", "--threads", type=int, default=2, help="Number of threads."
     )
-    quant_parser.add_argument(
+    parser.add_argument(
         "--inclusion-threshold",
         type=int,
         default=10,
         help="Filter events with less than N reads (default 10)",
     )
     # TODO: Maybe better named just as --read-threshold
-    quant_parser.add_argument(
+    parser.add_argument(
         "--psi-threshold",
         type=int,
         default=20,
         help="Do not compute PSI for samples with less than N reads (default 20)",
     )
-    quant_parser.set_defaults(func=run_with)
 
 
 ########################################################################
