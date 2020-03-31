@@ -20,6 +20,7 @@ import sys
 import numpy as np
 from scipy.stats import fisher_exact
 from scipy.stats import chi2_contingency
+from statsmodels.stats.multitest import multipletests
 
 
 ########################################################################
@@ -40,28 +41,6 @@ def loadNPZ(x):
         print("ERR ** Cannot load matrix %s. Check path or format." % x)
         sys.exit(1)
     return data
-
-
-def getColIndexFromArray(x, y):
-    """
-    takes in list of strings = x
-    and finds list index in array = y
-    """
-
-    return np.nonzero(np.isin(y, x))
-
-
-def returnSamplesFromManifest(x):
-    """
-    reads in mesa formatted manifest
-    returns list of samples
-    """
-    s = list()
-    with open(x) as fin:
-        for i in fin:
-            s.append(i.split()[0])
-
-    return s
 
 
 def getClust(fname):
@@ -101,17 +80,26 @@ def add_parser(subparser):
         default=False,
         help="Use X^2 instead of fishers. Quicker, not as sensitive.",
     )
+    pairwise_parser.add_argument(
+        "--no-correction",
+        action="store_true",
+        default=False,
+        help="Output raw p-values instead of corrected ones. Correction is "
+        "done via Benjamini-Hochberg",
+    )
     pairwise_parser.set_defaults(func=run_with)
 
 
 def run_with(args):
     pmesa = args.inclusionMESA
     cmesa = args.clusters
-    x = args.chi2
+    if args.chi2:
+        test_method = chi2_contingency
+    else:
+        test_method = fisher_exact
 
     # load psi
     data = loadNPZ(pmesa)
-
     clusters = getClust(cmesa)
 
     # table has 3 arrays, cols, rows and data
@@ -133,45 +121,21 @@ def run_with(args):
         sep="\t",
     )
 
-    pvals = list()
-    testedEvents = list()
-    if not x:
-        for n, vals in enumerate(matrix):
-            eventID = rows[n]
-            mxes = matrix[np.isin(rows, clusters[eventID])]
+    for n, vals in enumerate(matrix):
+        event_id = rows[n]
+        mxes = matrix[np.isin(rows, clusters[event_id])]
 
-            inc = vals
-            exc = np.sum(mxes, axis=0)
+        inc = vals
+        exc = np.sum(mxes, axis=0)
 
-            tempPvals = list()
+        pvalues = list()
 
-            for i in comps:
-                left, right = i
-                table = [[inc[left], inc[right]], [exc[left], exc[right]]]
+        for i in comps:
+            left, right = i
+            table = [[inc[left], inc[right]], [exc[left], exc[right]]]
 
-                data = fisher_exact(table)[-1]
-                tempPvals.append(data)
-
-            print(eventID, "\t".join(str(x) for x in tempPvals), sep="\t")
-    else:
-        for n, vals in enumerate(matrix):
-            eventID = rows[n]
-            mxes = matrix[np.isin(rows, clusters[eventID])]
-
-            inc = vals
-            exc = np.sum(mxes, axis=0)
-
-            tempPvals = list()
-
-            for i in comps:
-                left, right = i
-
-                table = [[inc[left], inc[right]], [exc[left], exc[right]]]
-                try:
-                    data = chi2_contingency(table)[1]
-                except:
-                    # not enough data for text
-                    data = np.nan
-                tempPvals.append(data)
-
-            print(eventID, "\t".join(str(x) for x in tempPvals), sep="\t")
+            data = test_method(table)[1]
+            pvalues.append(data)
+        if not args.no_correction:
+            pvalues = multipletests(pvalues, method="fdr_bh")
+        print(event_id, "\t".join(str(x) for x in pvalues), sep="\t")
