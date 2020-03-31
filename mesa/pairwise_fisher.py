@@ -16,68 +16,12 @@
 # Hot Imports & Global Variable
 ########################################################################
 
+import argparse
 import sys
 import numpy as np
 from scipy.stats import fisher_exact
 from scipy.stats import chi2_contingency
-
-########################################################################
-# CommandLine
-########################################################################
-
-
-class CommandLine(object):
-    """
-    Handle the command line, usage and help requests.
-    CommandLine uses argparse, now standard in 2.7 and beyond.
-    it implements a standard command line argument parser with various argument
-    options, and a standard usage and help,
-    attributes:
-    myCommandLine.args is a dictionary which includes each of the available
-    command line arguments as myCommandLine.args['option']
-    """
-
-    def __init__(self, inOpts=None):
-        """
-        CommandLine constructor.
-        Implements a parser to interpret the command line argv string using argparse.
-        """
-        import argparse
-
-        self.parser = argparse.ArgumentParser(
-            description="TBD",
-            epilog="Please feel free to forward any usage questions or concerns",
-            add_help=True,  # default is True
-            prefix_chars="-",
-            usage="%(prog)s --inclusionMESA psis.npz",
-        )
-        # Add args
-        self.parser.add_argument(
-            "--inclusionMESA",
-            type=str,
-            action="store",
-            required=True,
-            help="Compressed NPZ formatted Inclusion count matrix from quantMESA.",
-        )
-        self.parser.add_argument(
-            "-c",
-            "--clusters",
-            type=str,
-            action="store",
-            required=True,
-            help="Clusters table.",
-        )
-        self.parser.add_argument(
-            "--chi2",
-            action="store_true",
-            default=False,
-            help="Use X^2 instead of fishers. Quicker, not as sensitive.",
-        )
-
-        if inOpts is None:
-            self.args = vars(self.parser.parse_args())
-        else:
-            self.args = vars(self.parser.parse_args(inOpts))
+from statsmodels.stats.multitest import multipletests
 
 
 ########################################################################
@@ -138,38 +82,45 @@ def getClust(fname):
 #
 ########################################################################
 
-def add_parser(subparser):
-    pairwise_parser = subparser.add_parser("pairwise")
-    pairwise_parser.add_argument(
+def add_parser(parser):
+    parser.add_argument(
         "--inclusionMESA",
         type=str,
         required=True,
         help="Compressed NPZ formatted Inclusion count matrix from quantMESA.",
     )
-    pairwise_parser.add_argument(
+    parser.add_argument(
         "-c",
         "--clusters",
         type=str,
         required=True,
         help="Clusters table.",
     )
-    pairwise_parser.add_argument(
+    parser.add_argument(
         "--chi2",
         action="store_true",
         default=False,
         help="Use X^2 instead of fishers. Quicker, not as sensitive.",
     )
-    pairwise_parser.set_defaults(func=run_with)
+    parser.add_argument(
+        "--no-correction",
+        action="store_true",
+        default=False,
+        help="Output raw p-values instead of corrected ones. Correction is "
+        "done via Benjamini-Hochberg",
+    )
 
 
 def run_with(args):
     pmesa = args.inclusionMESA
     cmesa = args.clusters
-    x = args.chi2
+    if args.chi2:
+        test_method = chi2_contingency
+    else:
+        test_method = fisher_exact
 
     # load psi
     data = loadNPZ(pmesa)
-
     clusters = getClust(cmesa)
 
     # table has 3 arrays, cols, rows and data
@@ -191,45 +142,32 @@ def run_with(args):
         sep="\t",
     )
 
-    pvals = list()
-    testedEvents = list()
-    if not x:
-        for n, vals in enumerate(matrix):
-            eventID = rows[n]
-            mxes = matrix[np.isin(rows, clusters[eventID])]
+    for n, vals in enumerate(matrix):
+        event_id = rows[n]
+        mxes = matrix[np.isin(rows, clusters[event_id])]
 
-            inc = vals
-            exc = np.sum(mxes, axis=0)
+        inc = vals
+        exc = np.sum(mxes, axis=0)
 
-            tempPvals = list()
+        pvalues = list()
 
-            for i in comps:
-                left, right = i
-                table = [[inc[left], inc[right]], [exc[left], exc[right]]]
+        for i in comps:
+            left, right = i
+            table = [[inc[left], inc[right]], [exc[left], exc[right]]]
 
-                data = fisher_exact(table)[-1]
-                tempPvals.append(data)
+            data = test_method(table)[1]
+            pvalues.append(data)
+        if not args.no_correction:
+            pvalues = multipletests(pvalues, method="fdr_bh")
+        print(event_id, "\t".join(str(x) for x in pvalues), sep="\t")
 
-            print(eventID, "\t".join(str(x) for x in tempPvals), sep="\t")
-    else:
-        for n, vals in enumerate(matrix):
-            eventID = rows[n]
-            mxes = matrix[np.isin(rows, clusters[eventID])]
 
-            inc = vals
-            exc = np.sum(mxes, axis=0)
+def main():
+    parser = argparse.ArgumentParser()
+    add_parser(parser)
+    args = parser.parse_args()
+    run_with(args)
 
-            tempPvals = list()
 
-            for i in comps:
-                left, right = i
-
-                table = [[inc[left], inc[right]], [exc[left], exc[right]]]
-                try:
-                    data = chi2_contingency(table)[1]
-                except:
-                    # not enough data for text
-                    data = np.nan
-                tempPvals.append(data)
-
-            print(eventID, "\t".join(str(x) for x in tempPvals), sep="\t")
+if __name__ == "__main__":
+    main()

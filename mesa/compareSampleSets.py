@@ -21,78 +21,6 @@ import numpy as np
 from scipy.stats import ranksums
 from statsmodels.stats.multitest import multipletests
 
-########################################################################
-# CommandLine
-########################################################################
-
-
-class CommandLine(object):
-    """
-    Handle the command line, usage and help requests.  CommandLine uses
-    argparse, now standard in 2.7 and beyond.  it implements a standard command
-    line argument parser with various argument options, and a standard usage
-    and help,
-    attributes:
-    myCommandLine.args is a dictionary which includes each of the available
-    command line arguments as myCommandLine.args['option']
-
-    methods:
-
-    """
-
-    def __init__(self, inOpts=None):
-        """
-        CommandLine constructor.
-        Implements a parser to interpret the command line argv string using
-        argparse.
-        """
-        import argparse
-
-        self.parser = argparse.ArgumentParser(
-            description="TBD",
-            epilog="Please feel free to forward any usage questions or concerns",
-            add_help=True,  # default is True
-            prefix_chars="-",
-            usage="%(prog)s -m1 manifest1.txt -m2 manifest2.txt",
-        )
-        # Add args
-        self.parser.add_argument(
-            "--psiMESA",
-            type=str,
-            action="store",
-            required=True,
-            help="Compressed NPZ formatted PSI matrix from quantMESA.",
-        )
-        self.parser.add_argument(
-            "-m1",
-            "--manifest1",
-            type=str,
-            action="store",
-            required=True,
-            help="Manifest containing samples for sample set group1",
-        )
-        self.parser.add_argument(
-            "-m2",
-            "--manifest2",
-            type=str,
-            action="store",
-            required=True,
-            help="Manifest containing samples for sample set group2",
-        )
-        self.parser.add_argument(
-            "-o",
-            "--out_prefix",
-            type=str,
-            action="store",
-            required=False,
-            help="Prefix for output file.",
-        )
-
-        if inOpts is None:
-            self.args = vars(self.parser.parse_args())
-        else:
-            self.args = vars(self.parser.parse_args(inOpts))
-
 
 ########################################################################
 # Helper Functions
@@ -142,29 +70,27 @@ def returnSamplesFromManifest(x):
 #
 ########################################################################
 
-def add_parser(subparser):
-    css_parser = subparser.add_parser("compare_sample_sets")
-    css_parser.add_argument(
+def add_parser(parser):
+    parser.add_argument(
         "--psiMESA",
         type=str,
         required=True,
         help="Compressed NPZ formatted PSI matrix from 'mesa quant'.",
     )
-    css_parser.add_argument(
+    parser.add_argument(
         "-m1",
         "--manifest1",
         type=str,
         required=True,
         help="Manifest containing samples for sample set group1",
     )
-    css_parser.add_argument(
+    parser.add_argument(
         "-m2",
         "--manifest2",
         type=str,
         required=True,
         help="Manifest containing samples for sample set group2",
     )
-    css_parser.set_defaults(func=run_with)
 
 
 def run_with(args):

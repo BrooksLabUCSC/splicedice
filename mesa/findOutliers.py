@@ -25,10 +25,9 @@ import numpy as np
 # CommandLine
 ########################################################################
 
-def add_parser(subparser):
+def add_parser(parser):
     """Add command line argument parser for findOutliers module"""
-    outlier_parser = subparser.add_parser("findOutliers")
-    outlier_parser.add_argument(
+    parser.add_argument(
         "--psiMESA",
         type=str,
         action="store",
@@ -36,14 +35,14 @@ def add_parser(subparser):
         help="Compressed NPZ formatted PSI matrix from quantMESA.",
     )
 
-    outlier_parser.add_argument(
+    parser.add_argument(
         "-m",
         "--manifest",
         action="store",
         required=True,
         help="Sample manifest for samples you want ",
     )
-    outlier_parser.add_argument(
+    parser.add_argument(
         "--nullMan",
         action="store",
         required=False,
@@ -51,7 +50,7 @@ def add_parser(subparser):
         help="List of samples you want to use to use as baseline/background. "
              "Samples must be in table.",
     )
-    outlier_parser.add_argument(
+    parser.add_argument(
         "--outlierCutoff",
         type=int,
         action="store",
@@ -59,7 +58,7 @@ def add_parser(subparser):
         default=3,
         help="Report events where zScore >= N (default 3).",
     )
-    outlier_parser.add_argument(
+    parser.add_argument(
         "--dpsiThrsh",
         type=float,
         action="store",
@@ -67,7 +66,6 @@ def add_parser(subparser):
         default=0.1,
         help="Report events where dPSI >= N (default 0.1).",
     )
-    outlier_parser.set_defaults(func=run_with)
 
 
 ########################################################################

@@ -32,64 +32,6 @@ from scipy.cluster.hierarchy import linkage
 
 
 ########################################################################
-# CommandLine
-########################################################################
-
-
-class CommandLine(object):
-    """
-    Handle the command line, usage and help requests.  CommandLine uses
-    argparse, now standard in 2.7 and beyond.  it implements a standard command
-    line argument parser with various argument options, and a standard usage
-    and help,
-    attributes:
-    myCommandLine.args is a dictionary which includes each of the available
-    command line arguments as myCommandLine.args['option']
-    """
-
-    def __init__(self, inOpts=None):
-        """
-        CommandLine constructor.
-        Implements a parser to interpret the command line argv string using
-        argparse.
-        """
-        import argparse
-
-        self.parser = argparse.ArgumentParser(
-            description="clusterMESA.py - Apply various clusrering methods to PSI data.",
-            # epilog = 'Please feel free to forward any questions or concerns to /dev/null',
-            add_help=True,  # default is True
-            prefix_chars="-",
-            usage="%(prog)s --psiMESA psis.npz -m manifest.txt",
-            formatter_class=argparse.RawTextHelpFormatter,
-        )
-
-        # Add args
-        self.parser.add_argument(
-            "--psiMESA",
-            type=str,
-            action="store",
-            required=True,
-            help="Compressed NPZ formatted PSI matrix from quantMESA.",
-        )
-
-        self.parser.add_argument(
-            "-m", "--manifest", action="store", required=True, help="Sample manifest"
-        )
-        if inOpts is None:
-            self.args = vars(self.parser.parse_args())
-        else:
-            self.args = vars(self.parser.parse_args(inOpts))
-
-    def is_valid_filter(self, parser, arg):
-        if arg not in ["gtag_only", "gc_at", "all"]:
-            parser.error("Filter argument %s is invalid!" % arg)
-            sys.exit(1)
-        else:
-            return arg
-
-
-########################################################################
 # Functions
 ########################################################################
 
@@ -295,17 +237,15 @@ def loadNPZ(x):
 # Main
 ########################################################################
 
-def add_parser(subparser):
-    cluster_parser = subparser.add_parser("cluster")
-    cluster_parser.add_argument(
+def add_parser(parser):
+    parser.add_argument(
         "--psiMESA",
         type=str,
         action="store",
         required=False,
         help="Compressed NPZ formatted PSI matrix from quantMESA.",
     )
-    cluster_parser.add_argument("-m", "--manifest", required=True,)
-    cluster_parser.set_defaults(func=run_with)
+    parser.add_argument("-m", "--manifest", required=True,)
 
 
 def run_with(args):

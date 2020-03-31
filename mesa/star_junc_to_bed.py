@@ -4,12 +4,10 @@ aligner into bed files for further processing."""
 
 
 def add_parser(subparser):
-    sj_parser = subparser.add_parser("star_junc_to_bed")
-    sj_parser.add_argument("-s", "--star-tab", required=True)
-    sj_parser.add_argument("--min-overhang", type=int, default=5)
-    sj_parser.add_argument("--min-unique", type=int, default=5)
-    sj_parser.add_argument("--no-multimap", default=False, action="store_true")
-    sj_parser.set_defaults(func=run_with)
+    parser.add_argument("-s", "--star-tab", required=True)
+    parser.add_argument("--min-overhang", type=int, default=5)
+    parser.add_argument("--min-unique", type=int, default=5)
+    parser.add_argument("--no-multimap", default=False, action="store_true")
 
 
 def run_with(args):
