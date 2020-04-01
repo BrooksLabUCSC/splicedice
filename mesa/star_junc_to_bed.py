@@ -3,7 +3,7 @@
 aligner into bed files for further processing."""
 
 
-def add_parser(subparser):
+def add_parser(parser):
     parser.add_argument("-s", "--star-tab", required=True)
     parser.add_argument("--min-overhang", type=int, default=5)
     parser.add_argument("--min-unique", type=int, default=5)
