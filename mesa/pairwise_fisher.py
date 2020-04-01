@@ -158,7 +158,7 @@ def run_with(args):
             data = test_method(table)[1]
             pvalues.append(data)
         if not args.no_correction:
-            pvalues = multipletests(pvalues, method="fdr_bh")
+            pvalues = multipletests(pvalues, method="fdr_bh")[1]
         print(event_id, "\t".join(str(x) for x in pvalues), sep="\t")
 
 
