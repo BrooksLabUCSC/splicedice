@@ -42,7 +42,7 @@ def main():
 
     args = parser.parse_args()
 
-    if "func" in args.__dict__:
+    if "main" in args.__dict__:
         args.main(args)
     else:
         parser.print_usage()
