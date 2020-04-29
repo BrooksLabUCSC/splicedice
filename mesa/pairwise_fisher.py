@@ -72,7 +72,7 @@ def getClust(fname):
         for i in fin:
             left, right = i.rstrip().split()
             mxes = right.split(",")
-            data[left] = mxes + [left]
+            data[left] = mxes
     return data
 
 
@@ -155,9 +155,20 @@ def run_with(args):
             left, right = i
             table = [[inc[left], inc[right]], [exc[left], exc[right]]]
 
+            # chi^2 test will fail on contingency tables where any column or
+            # rows are zero, but not if diagonal is zero
+            # [[0, 0], [2, 3]] fail
+            # [[0, 2], [0, 3]] fail
+            # [[0, 2], [2, 0]] still valid
+            if args.chi2:
+                col_total = [inc[left] + inc[right], exc[left] + exc[right]]
+                row_total = [inc[left] + exc[left], inc[right] + exc[right]]
+                if any(count == 0 for count in row_total + col_total):
+                    continue
+
             data = test_method(table)[1]
             pvalues.append(data)
-        if not args.no_correction:
+        if not args.no_correction and len(pvalues) > 0:
             pvalues = multipletests(pvalues, method="fdr_bh")[1]
         print(event_id, "\t".join(str(x) for x in pvalues), sep="\t")
 
