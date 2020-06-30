@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+"""
+
+"""
+
 import pysam
 from multiprocessing import Pool
 import os
@@ -8,11 +12,9 @@ import argparse
 
 
 
-filenames = ("/scratch/dennisrm/sequin/mixa/sequin_mixa.Aligned.sortedByCoord.out.bam",
-            "/scratch/dennisrm/sequin/mixb/sequin_mixb.Aligned.sortedByCoord.out.bam")
-
-
 def parseManifest(manifestFilename,bedDirectory,outputPrefix):
+    """
+    """
     bams = []
     newManifest = []
     with open(manifestFilename, "r") as manifestFile:
@@ -35,11 +37,11 @@ def getJunctionsFromBam(sample):
     sampleName, filename, metadata, condition, bedFilename = sample
     genome = pysam.AlignmentFile(filename)
     counts = {}
-    k = 0
+    #k = 0
     for read in genome.fetch():
-        k += 1
-        if k == 100:
-            break
+        #k += 1
+        #if k == 100:
+        #    break
         if read.is_reverse:
             strand = "-"
         else:
@@ -47,36 +49,46 @@ def getJunctionsFromBam(sample):
         blocks = read.get_blocks()
         for i in range(len(blocks)-1):
             junction = (read.reference_name,blocks[i][1],blocks[i+1][0],strand)
-            overhang = min(blocks[i][1]-blocks[i][0],blocks[i+1][1]-blocks[i+1][0])
-            try:
-                counts[junction][0] += 1
-                counts[junction][1] = max(overhang,counts[junction][1])
-            except KeyError:
-                counts[junction] = [1,overhang]
+            if junction[2] > junction [1]:
+                overhang = min(blocks[i][1]-blocks[i][0],blocks[i+1][1]-blocks[i+1][0])
+                try:
+                    counts[junction][0] += 1
+                    counts[junction][1] = max(overhang,counts[junction][1])
+                except KeyError:
+                    counts[junction] = [1,overhang]
+                
+    filteredJunctions = []
+    for junction in sorted(counts):
+        if junction[2] > junction[1] + 50 and counts[junction][1] >= 5:
+            filteredJunctions.append(junction)
     
     with open(bedFilename,"w") as bedOut:
-        for junction in sorted(junction):
+        for junction in filteredJunctions:
             chromosome,left,right,strand = junction
-            bedOut.write(f"{chromosome}\t{left}\t{right}\t.\t{counts[junction]}\t{strand}\n")
+            bedOut.write(f"{chromosome}\t{left}\t{right}\t.\t{counts[junction][0]}\t{strand}\n")
             
     return filename, bedFilename, len(counts)
 
 
 def bamsToBeds(bams, nThreads):
-
+    """
+    """
     with Pool(nThreads) as pool:
-        for info in pool.map(getJunctionsFromBam,bams):
+        for info in pool.imap(getJunctionsFromBam,bams):
             filename,bedFilename,nJunctions = info
             print("bam:", filename)
             print("number of junctions found:",nJunctions)
             print("saved to bed:", bedFilename)
 
 
-def writeNewManifest(newManifest):
-    newManifestPath = os.path.join(path,f"{outputPrefix}_manifest")
+def writeNewManifest(newManifest,outputPrefix):
+    """
+    """
+    #newManifestPath = os.path.join(path,f"{outputPrefix}_manifest.txt")
+    newManifestPath = f"{outputPrefix}_manifest.txt"
     with open(newManifestPath,"w") as manifestFile:
         for line in newManifest:
-            manifestFile.write("\t".join(line)+"\n")
+            manifestFile.write(line+"\n")
     print("new manifest written to:", newManifestPath)
 
 
@@ -98,20 +110,26 @@ def parseArgs():
     return parser.parse_args()
     
 def main():
-
+    """
+    """
+    
     args = parseArgs()
     manifestFilename = args.manifest
     outputPrefix = args.output_prefix
     nThreads = args.number_threads
+    minOverhang = args.min_overhang
 
     bedDirectory = os.path.join(os.getcwd(),f"{outputPrefix}_junction_beds")
-    os.mkdir(bedDirectory)
+    try:
+        os.mkdir(bedDirectory)
+    except FileExistsError:
+        pass
 
     bams, newManifest = parseManifest(manifestFilename,bedDirectory,outputPrefix)
 
     bamsToBeds(bams,nThreads)
 
-    writeNewManifest(newManifest)
+    writeNewManifest(newManifest,outputPrefix)
 
 
 if __name__ == "__main__":
