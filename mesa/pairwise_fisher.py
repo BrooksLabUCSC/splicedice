@@ -12,17 +12,6 @@
 #
 ########################################################################
 
-########################################################################
-# Hot Imports & Global Variable
-########################################################################
-
-import argparse
-import sys
-import numpy as np
-from scipy.stats import fisher_exact
-from scipy.stats import chi2_contingency
-from statsmodels.stats.multitest import multipletests
-
 
 ########################################################################
 # Helper Functions
@@ -70,8 +59,13 @@ def getClust(fname):
     data = dict()
     with open(fname) as fin:
         for i in fin:
-            left, right = i.rstrip().split()
-            mxes = right.split(",")
+            try:
+                left, right = i.rstrip().split()
+                mxes = right.split(",")
+            except ValueError:
+                left = i.strip()
+                mxes = []
+            
             data[left] = mxes
     return data
 
@@ -112,6 +106,14 @@ def add_parser(parser):
 
 
 def run_with(args):
+    """
+    """
+    import sys
+    import numpy as np
+    from scipy.stats import fisher_exact
+    from scipy.stats import chi2_contingency
+    from statsmodels.stats.multitest import multipletests
+    
     pmesa = args.inclusionMESA
     cmesa = args.clusters
     if args.chi2:
@@ -120,11 +122,26 @@ def run_with(args):
         test_method = fisher_exact
 
     # load psi
-    data = loadNPZ(pmesa)
+    
+    ###### DENNIS
+    #data = loadNPZ(pmesa)
+    rows = []
+    matrix = []
+    with open(pmesa) as tsv:
+        cols = tsv.readline().rstrip().split("\t")[:-1]
+        for line in tsv:
+            row = line.rstrip().split("\t")
+            rows.append(row[-1])
+            matrix.append(row[:-1])
+    matrix = np.array(matrix,dtype=float)
+    rows = np.array(rows)
+    ######     
+    
+    
     clusters = getClust(cmesa)
 
     # table has 3 arrays, cols, rows and data
-    cols, rows, matrix = data["cols"], data["rows"], data["data"]
+    ###### cols, rows, matrix = data["cols"], data["rows"], data["data"]
 
     comparisons = set()
     for i, v in enumerate(cols):
@@ -153,6 +170,12 @@ def run_with(args):
 
         pvalues = list()
 
+        if event_id == "chrIS:2363757-2380162":
+            print(event_id,file=sys.stderr)
+            print(mxes,file=sys.stderr)
+            print(inc,file=sys.stderr)
+            print(exc,file=sys.stderr)
+            
         for i in comps:
             left, right = i
             table = [[inc[left], inc[right]], [exc[left], exc[right]]]
@@ -175,12 +198,10 @@ def run_with(args):
         print(event_id, "\t".join(str(x) for x in pvalues), sep="\t")
 
 
-def main():
+
+if __name__ == "__main__":
+    import argparse
     parser = argparse.ArgumentParser()
     add_parser(parser)
     args = parser.parse_args()
     run_with(args)
-
-
-if __name__ == "__main__":
-    main()
