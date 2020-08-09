@@ -4,13 +4,6 @@
 
 """
 
-import pysam
-from multiprocessing import Pool
-import os
-import argparse
-
-
-
 
 def parseManifest(manifestFilename,bedDirectory,outputPrefix):
     """
@@ -92,9 +85,8 @@ def writeNewManifest(newManifest,outputPrefix):
     print("new manifest written to:", newManifestPath)
 
 
-def parseArgs():
+def add_parser():
     """ """
-    parser = argparse.ArgumentParser(description='Extract splice junctions from bam file and save to bed')           
     parser.add_argument("--manifest","-m")
     parser.add_argument("--output_prefix","-o")   
     parser.add_argument("--max_length",type=int,default=50000)
@@ -107,13 +99,15 @@ def parseArgs():
     parser.add_argument("--number_threads","-n",type=int,default=1
     )
 
-    return parser.parse_args()
     
-def main():
+def run_with(args):
     """
     """
+    import os    
+    import pysam
+    from multiprocessing import Pool
     
-    args = parseArgs()
+    # Input arguments
     manifestFilename = args.manifest
     outputPrefix = args.output_prefix
     nThreads = args.number_threads
@@ -131,6 +125,9 @@ def main():
 
     writeNewManifest(newManifest,outputPrefix)
 
-
 if __name__ == "__main__":
-    main()
+    import argparse
+    parser = argparse.ArgumentParser()
+    add_parser(parser)
+    args = parser.parse_args()
+    run_with(args)

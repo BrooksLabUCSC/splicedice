@@ -136,6 +136,8 @@ def run_with(args):
     # do the math
     comps = list(comparisons)
 
+    
+
     print(
         "clusterID",
         "\t".join("%s_%s" % (cols[j[0]], cols[j[1]]) for j in comps),

@@ -1,63 +1,50 @@
 #!/usr/bin/env python3
 """
-This program will process junction files to create a reference "transciptome" which will contain junctions that will process through kallisto
+Process alignment files (BAMs) to determine coverage at positions along introns, as defined in junction file.
 
-PATH=/private/groups/brookslab/bin/bedtools-2.25.0/bin/:$PATH
-
-python3 sigma_psi.py -b sigma_psi_bam_manifest.tsv  -m DMSO_v_SSA100_allPSI.tsv  -j me_junctions.bed -c me_all_clusters2.tsv
+python3 intron_coverage.py -b bam_manifest.tsv  -m output_allPSI.tsv  -j mesa_junctions.bed
 """
 
-import time
-start = time.time()
 
-import pybedtools
-import sys
-import argparse
-import os
-import pysam
-from multiprocessing import Pool
-import numpy as np
-
-
-class CommandLine() :
+def add_parser(parser):
     """
-    Takes command line options
     """
-    def __init__(self, inOpts=None) :
-            """
-            CommandLine constructor.
-            Implements a parser to interpret the command line argv string using argparse.
-            """
-            self.parser = argparse.ArgumentParser(description = 'runRTest.py arguments',
-                                                 epilog = 'For more help contact: ',
-                                                 add_help = True, #default is True
-                                                 prefix_chars = '-',
-                                                 usage = '%(prog)s [options] -option1[default]'
-                                                 )
-             # Add args
-            self.parser.add_argument('-b', '--bamManifest', action = 'store', required=True, help='merged bam file for all samples')
-            self.parser.add_argument('-m', '--mesaTable', action = 'store', required=True, help='mesa allPSI.tsv output from quantMESA.py')
-            self.parser.add_argument('-j', '--juncFile', action = 'store', required=True, help='mesa allPSI.tsv output from constructMESA.py')
-            #self.parser.add_argument('-o', '--output', action = 'store', required=True, help='output PSI table with % IR')
-            #self.parser.add_argument('-c', '--clusters', action = 'store', required=True, help='me_clusters.tsv output from constructMESA.py')
 
-            if inOpts is None :
-                self.args = self.parser.parse_args()
-            else :
-                self.args = self.parser.parse_args(inOpts)
+    parser.add_argument('-b', '--bamManifest', 
+                        action = 'store', required=True, 
+                        help='tab-separated list of bam files for all samples')
+    parser.add_argument('-m', '--mesaTable', 
+                        action = 'store', required=True, 
+                        help='mesa allPSI.tsv output from mesa')
+    parser.add_argument('-j', '--junctionFile', 
+                        action = 'store', required=True, 
+                        help='mesa junction.bed output from mesa')
+    parser.add_argument('-s', '--binSize', 
+                        action='store', default=500000, 
+                        help='chromosome bins for processing (must exceed intron length)')
+    parser.add_argument('-n', '--numThreads', 
+                        action='store', default=1, 
+                        help='number of BAM-parsing threads to run concurrently')
 
-class sigmaPSI():
-    def __init__(self, myCommandLine):
+    parser.add_argument('-o', '--outputDir',
+                        action = 'store', required=True, 
+                        help='directory for outputting intron coverage count files')
+
+class IntronCoverage():
+    def __init__(self, manifest,mesa,junctionFile,binSize,numThreads):
         """
         Instantiate object attributes
         """
-        self.manifest = myCommandLine.args.bamManifest
-        self.mesa = myCommandLine.args.mesaTable
-        self.junctionFilename = myCommandLine.args.juncFile
-        self.binSize = 500000
+        self.manifest = manifest
+        self.mesa = mesa
+        self.junctionFilename = junctionFile
+        self.binSize = binsSize
+        self.numThreads = numThreads
+
+        self.start = time.time()
 
 
-    def getBAMFiles(self):
+    def parseManifest(self):
 
         print('getting paths for bam files')
 
@@ -74,7 +61,7 @@ class sigmaPSI():
 
         self.header_list = [key+'%IR' for key in self.bams.keys()]
 
-    def createPercentiles(self):
+    def getIntronPercentiles(self):
         """
         Create a transcriptome in fasta format
         """
@@ -118,7 +105,7 @@ class sigmaPSI():
         self.percentiles = {chrom:np.array(a) for chrom,a in self.percentiles.items()}
 
 
-    def getIRValuesNew(self,sample):
+    def getCoverage(self,sample):
         tab = "\t"
         filename = self.bams[sample]
         
@@ -126,7 +113,7 @@ class sigmaPSI():
         
         counts = {chrom:np.zeros(a.shape,dtype=int) for chrom,a in percentiles.items()}
         
-        print(sample,"starting",time.time()-start) 
+        print(sample,"starting",time.time()-self.start) 
         
         k = 0
                         
@@ -166,7 +153,7 @@ class sigmaPSI():
                         rights[chrom] = {}
                         rights[chrom][block[1]] = 1
 
-        print(sample,"collected",time.time()-start) 
+        print(sample,"collected",time.time()-self.start) 
 
         counts = {chrom:np.zeros(shape=a.shape,dtype=int) for chrom,a in percentiles.items()}
 
@@ -214,7 +201,7 @@ class sigmaPSI():
 
         ####
         medians = {chrom:np.median(a,axis=1) for chrom,a in counts.items()}
-        print(sample,"counted",time.time()-start) 
+        print(sample,"counted",time.time()-self.start) 
         
         # Making list of junctions and array indices, sorting by coordinates
         junctions = []
@@ -224,7 +211,7 @@ class sigmaPSI():
         junctions.sort(key = lambda j: j[1])
         
         # Writing junctions and percentiles to bed-like text file
-        with open(f"{sample}_sigmaPSI_percentiles.txt","w") as outfile:
+        with open(f"{sample}_intron_coverage.txt","w") as outfile:
             
             for i,junction in junctions:
                 chromosome,left,right,strand = junction
@@ -235,20 +222,38 @@ class sigmaPSI():
                 outfile.write(f"{chromosome}\t{left}\t{right}\t.\t{median}\t{strand}\t{juncPercentiles}\t{juncCounts}\n")
         print(sample,"done",time.time()-start) 
             
-    def getIRValuesPool(self):
-        numThreads = 8
+    def getCoveragePool(self):
         samples = list(self.bams.keys())
-        with Pool(numThreads) as pool:
-            for run in pool.imap_unordered(self.getIRValuesNew, samples):
+        with Pool(self.numThreads) as pool:
+            for run in pool.imap_unordered(self.getCoverage, samples):
                 pass
                      
 
-def main(myCommandLine=None):
-    myCommandLine = CommandLine(myCommandLine)
-    sigma_psi = sigmaPSI(myCommandLine)
-    sigma_psi.getBAMFiles()
-    sigma_psi.createPercentiles()
-    sigma_psi.getIRValuesPool()
+def run_with(args):
+    """  """
+    import time
+    import sys
+    import os
+    import pysam
+    import numpy as np
+    from multiprocessing import Pool
+
+    manifest = args.bamManifest
+    mesa = args.mesaTable
+    junctionFilename = args.juncFile
+    binSize = args.binSize
+    numThreads = args.numThreads
+
+    intronCoverage = IntronCoverage(manifest,mesa,junctionFile,binSize,numThreads)
+    intronCoverage.parseManifest()
+    intronCoverage.getIntronPercentiles()
+    intronCoverage.getCoveragePool()
     print("Your runtime was %s seconds." % (time.time() - start))
 
-main()
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser()
+    add_parser(parser)
+    args = parser.parse_args()
+    run_with(args)
+

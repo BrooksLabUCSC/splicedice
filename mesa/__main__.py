@@ -2,12 +2,13 @@
 """This script is the main entry point for the different MESA commands."""
 import argparse
 
-from . import quantMESA as quant
+from . import MESA as quant
 from . import star_junc_to_bed as sjb
 from . import pairwise_fisher as pf
 from . import compareSampleSets as css
 from . import clusterMESA as cm
 from . import findOutliers as fo
+from . import intron_coverage as ic
 
 
 def add_cmd(name, arg_parser_fn, run_with, subparser):
@@ -34,7 +35,10 @@ def main():
     subparsers = parser.add_subparsers()
 
     add_cmd("star_junc_to_bed", sjb.add_parser, sjb.run_with, subparsers)
+    add_cmd("bam_to_junc_bed", b2jb.add_parser, b2jb.run_with, subparsers)
     add_cmd("quant", quant.add_parser, quant.run_with, subparsers)
+    add_cmd("intron_coverage", ic.add_parser, ic.run_with, subparsers)
+    add_cmd("ir_table", it.add_parser, it.run_with, subparsers)
     add_cmd("cluster", cm.add_parser, cm.run_with, subparsers)
     add_cmd("compare_sample_sets", css.add_parser, css.run_with, subparsers)
     add_cmd("pairwise", pf.add_parser, pf.run_with, subparsers)
