@@ -39,7 +39,7 @@ def getClusters(filename):
                 clusters[row[0]] = []
     return clusters
 
-def calculateIR(samples,coverageDirectory,counts,clusters)
+def calculateIR(samples,coverageDirectory,counts,clusters):
     IR = {}
     coverage = {}
     junctions = set()
@@ -58,7 +58,7 @@ def calculateIR(samples,coverageDirectory,counts,clusters)
                 median = float(row[4])
                 coverage[sample][cluster] = row[-1].split(",")
                 covArray = np.array(coverage[sample][cluster])
-                RSD[sample][cluster] = np.stddev(covArray) / np.mean(covArray])
+                RSD[sample][cluster] = np.stddev(covArray) / np.mean(covArray)
                 try:
                     intronCount = counts[sample][cluster]
                     for mxCluster in clusters[cluster]:
@@ -78,7 +78,8 @@ def calculateIR(samples,coverageDirectory,counts,clusters)
 def writeIRtable(samples, outfilename, junctions, IR, RSD):
     tab = "\t"
     with open(outfilename,"w") as irTable:
-        irTable.write(f"Junction\t{tab.join([f"{sample}\t{sample}_RSD"])}\n")
+        header = tab.join([f'{sample}\t{sample}_RSD'])
+        irTable.write(f"Junction\t{header}\n")
         for junction in sorted(clusters):
             irValues = [f"{IR[sample][junction]:0.03f}\t{RSD[sample][junction]}" for sample in samples]
             irTable.write(f"{junction}\t{tab.join(irValues)}\n")   

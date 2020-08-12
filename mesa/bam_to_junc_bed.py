@@ -85,7 +85,7 @@ def writeNewManifest(newManifest,outputPrefix):
     print("new manifest written to:", newManifestPath)
 
 
-def add_parser():
+def add_parser(parser):
     """ """
     parser.add_argument("--manifest","-m")
     parser.add_argument("--output_prefix","-o")   

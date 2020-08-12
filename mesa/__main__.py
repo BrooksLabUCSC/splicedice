@@ -4,11 +4,13 @@ import argparse
 
 from . import MESA as quant
 from . import star_junc_to_bed as sjb
+from . import bam_to_junc_bed as bjb
 from . import pairwise_fisher as pf
 from . import compareSampleSets as css
 from . import clusterMESA as cm
 from . import findOutliers as fo
 from . import intron_coverage as ic
+from . import ir_table as it
 
 
 def add_cmd(name, arg_parser_fn, run_with, subparser):
@@ -35,7 +37,7 @@ def main():
     subparsers = parser.add_subparsers()
 
     add_cmd("star_junc_to_bed", sjb.add_parser, sjb.run_with, subparsers)
-    add_cmd("bam_to_junc_bed", b2jb.add_parser, b2jb.run_with, subparsers)
+    add_cmd("bam_to_junc_bed", bjb.add_parser, bjb.run_with, subparsers)
     add_cmd("quant", quant.add_parser, quant.run_with, subparsers)
     add_cmd("intron_coverage", ic.add_parser, ic.run_with, subparsers)
     add_cmd("ir_table", it.add_parser, it.run_with, subparsers)

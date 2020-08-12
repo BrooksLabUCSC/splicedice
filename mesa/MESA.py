@@ -259,10 +259,14 @@ class StarJuncToBed:
                 
 
         
-def add_parser():
+def add_parser(parser):
     """ """
-    parser.add_argument("--manifest","-m",action="store")
-    parser.add_argument("--output_prefix","-o",action="store") 
+    parser.add_argument("--manifest","-m",
+                        action="store",required=True,
+                       help="tab-separated list of samples with file paths")
+    parser.add_argument("--output_prefix","-o",
+                        action="store",required=True,
+                       help="prefix for output filenames") 
     parser.add_argument("--maxLength",default=50000)
     parser.add_argument("--minLength",default=50)
     parser.add_argument("--minOverhang",default=5)
