@@ -17,10 +17,15 @@ class Sample:
         self.filename = manifestLine[1]
         Sample.sampleList.append(self)
         
-        if self.filename.endswith(".bed"):
+        # Check filetype
+        if self.filename.upper().endswith(".BED"):
             self.type = "bed"
-        elif self.filename.endswith("SJ.out.tab"):
+        elif self.filename.upper().endswith("SJ.OUT.TAB"):
             self.type = "SJ"
+        elif self.filename.upper().endswith(".BAM"):
+            self.type = "bam"
+        else:
+            self.type = "unknown"
 
         self.metadata = manifestLine[2]
         self.condition = manifestLine[3]
@@ -29,10 +34,7 @@ class Sample:
             Sample.groups[self.condition].append(self)
         else:
             Sample.groups[self.condition] = [self]
-            
-def tabJoin(items):
-    return "\t".join(items)
-            
+                        
         
 class MESA:
     """ """
@@ -252,11 +254,6 @@ class MESA:
                 
                 
                 
-class StarJuncToBed:
-    """ """
-    pass
-                
-                
 
         
 def add_parser(parser):
@@ -267,13 +264,20 @@ def add_parser(parser):
     parser.add_argument("--output_prefix","-o",
                         action="store",required=True,
                        help="prefix for output filenames") 
-    parser.add_argument("--maxLength",default=50000)
-    parser.add_argument("--minLength",default=50)
-    parser.add_argument("--minOverhang",default=5)
-    parser.add_argument("--drim",action="store_true")
-    parser.add_argument("--noMultimap",action="store_true")
-    parser.add_argument("--filter",default="gtag_only",choices=["gtag_only"])
-    parser.add_argument("--minUnique",default=5)
+    parser.add_argument("--maxLength",default=50000,
+                       help="maximum splice junction size")
+    parser.add_argument("--minLength",default=50,
+                       help="minimum splice junction size")
+    parser.add_argument("--minOverhang",default=5,
+                       help="minimum overlap on reads to support splice junction")
+    parser.add_argument("--drim",action="store_true",
+                       help="create table for use by DRIMSeq")
+    parser.add_argument("--noMultimap",action="store_true",
+                       help="use only reads that uniquely map to one location")
+    parser.add_argument("--filter",default="gtag_only",choices=["gtag_only"],
+                       help="donor and acceptor intron sequences to include.")
+    parser.add_argument("--minUnique",default=5,
+                       help="minimum number of unique reads to support splice junction")
     
 def run_with(args):
     """ Main program which calls MESA algorithm class"""
