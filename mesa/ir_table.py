@@ -12,7 +12,7 @@ def add_parser(parser):
     parser.add_argument("-d","--coverageDirectory",
                         action="store",
                         help="")
-    parser.add_argument("-o","--outputFilename",
+    parser.add_argument("-o","--outputPrefix",
                         action="store",
                         help="")
 
@@ -75,14 +75,22 @@ def calculateIR(samples,coverageDirectory,counts,clusters):
     return junctions, IR, RSD
 
 
-def writeIRtable(samples, outfilename, junctions, IR, RSD):
+def writeIRtable(samples, outputPrefix, junctions, IR):
     tab = "\t"
-    with open(outfilename,"w") as irTable:
-        header = tab.join([f'{sample}\t{sample}_RSD'])
-        irTable.write(f"Junction\t{header}\n")
+    with open(f"{outputPrefix}_intron_retention.tsv","w") as irTable:
+        irTable.write(f"Junction\t{tab.join(samples)}\n")
         for junction in sorted(clusters):
-            irValues = [f"{IR[sample][junction]:0.03f}\t{RSD[sample][junction]}" for sample in samples]
+            irValues = [f"{IR[sample][junction]:0.03f}" for sample in samples]
             irTable.write(f"{junction}\t{tab.join(irValues)}\n")   
+            
+def writeRSDtable(samples, outputPrefix, junctions, RSD):
+    tab = "\t"
+    with open(f"{outputPrefix}_intron_retention_RSD.tsv","w") as rsdTable:
+        header = tab.join([f'{sample}_RSD' for sample in samples])
+        rsdTable.write(f"Junction\t{header}\n")
+        for junction in sorted(clusters):
+            rsd = [f"{RSD[s][junction]:0.03f}" for s in samples]
+            rsdTable.write(f"{junction}\t{tab.join(rsd)}\n") 
 
 
 def run_with(args):
@@ -93,7 +101,7 @@ def run_with(args):
     countFile = args.inclusionsCounts
     clusterFilename = args.clusters
     coverageDir = args.coverageDirectory
-    outfilename = args.outputFilename
+    outputPrefix = args.outputPrefix
 
     samples = [s for s in os.listdir(coverageDir) if s.endswith("intron_coverage.txt")]
 
@@ -102,7 +110,8 @@ def run_with(args):
 
     junctions, IR, RSD = calculateIR(samples,coverageDirectory,counts,clusters)
 
-    writeIRtable(samples, outfilename, junctions, IR, RSD)
+    writeIRtable(samples, outputPrefix, junctions, IR)
+    writeRSDtable(samples, outputPrefix, junctions, RSD)
 
 
 if __name__ == "__main__":
