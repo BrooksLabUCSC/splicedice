@@ -23,7 +23,7 @@ user discretion is advised.
 
 ## Dependencies
 - STAR aligner
-- bedtools
+- pysam
 
 ## Installation
 
@@ -55,8 +55,14 @@ Converts star aligner tab output files into bed files
 $ mesa star_junc_to_bed -s sj.tab
 ```
 
+### `mesa bam_to_junc_bed`
+Converts star aligner tab output files into bed files
+```bash
+$ mesa star_junc_to_bed -s sj.tab
+```
+
 ### `mesa quant`
-Processes STAR junction bed files and genome to produce output for later steps.
+Processes junction files (SJ.out.tab from STAR aligner or bed files such as from ) and genome to produce output for later steps.
 For information on the `bed_manifest.txt` format, see [Manifest Format](#manifest-format).
 ```bash
 $ mesa quant -m bed_manifest.txt -g genome.fa -o my_output
