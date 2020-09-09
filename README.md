@@ -9,6 +9,7 @@ user discretion is advised.
     + [Development](#development)
   * [Usage](#usage)
     + [Alignment with star](#alignment-with-star)
+    + [`mesa bam_to_junc_bed`](#mesa-bam_to_junc_bed)
     + [`mesa star_junc_to_bed`](#mesa-star_junc_to_bed)
     + [`mesa quant`](#mesa-quant)
       - [Additional options](#additional-options)
@@ -58,7 +59,7 @@ $ mesa star_junc_to_bed -s sj.tab
 ### `mesa bam_to_junc_bed`
 Converts star aligner tab output files into bed files
 ```bash
-$ mesa star_junc_to_bed -s sj.tab
+$ mesa bam_to_junc_bed -s sj.tab
 ```
 
 ### `mesa quant`
