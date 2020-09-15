@@ -5,6 +5,7 @@ Mutually Exclusive Splicing Analysis (MESA) main quantification step
 
 """
 
+import numpy as np
 
 class Sample:
     
@@ -101,22 +102,31 @@ class MESA:
                 for line in junctionFile:
                     row = line.rstrip().split("\t")
                     chromosome,left,right = row[0], int(row[1])-1 ,int(row[2])
-                    strand = strandSymbol[row[3]]
-                    intronMotif,annotation,unique,multi,overhang = [int(x) for x in row[4:]]
-                    
-                    if self.args.noMultimap:
-                        score = unique
-                    else:
-                        score = unique + multi
+
+                    if sample.type is "SJ":
+                        strand = strandSymbol[row[3]]
+                        intronMotif,annotation,unique,multi,overhang = [int(x) for x in row[4:]]
+                        if self.args.noMultimap:
+                            score = unique
+                        else:
+                            score = unique + multi
+                            
+                        if (right-left < self.args.maxLength and 
+                            right-left > self.args.minLength and
+                            strand is not "undefined" and
+                            score > self.args.minUnique and
+                            intronMotif in validMotifs):
+                            
+                            junctions.add((chromosome,left,right,strand))
+                            
+                    elif sample.type is "bed":
+                        score = int(row[4])
+                        strand = int(row[5])
+                        junctions.add((chromosome,left,right,strand))
+
 
                     # Include only high quality junctions
-                    if (right-left < self.args.maxLength and 
-                        right-left > self.args.minLength and
-                        strand is not "undefined" and
-                        score > self.args.minUnique and
-                        intronMotif in validMotifs):
-                        
-                        junctions.add((chromosome,left,right,strand))
+
                         
         return junctions
         
@@ -231,7 +241,7 @@ class MESA:
             allpsiTsv.write("cluster\n")
             
             for i,junction in enumerate(sorted(self.clusters)):
-                allpsiTsv.write("\t".join([f"{x:.2f}" for x in self.psi[i,:]])+
+                allpsiTsv.write("\t".join([f"{x:.3f}" for x in self.psi[i,:]])+
                                 f"\t{self.junctionString(junction)}\n")
                 
     def writeDrimLine(self,i,junction,other,file):
@@ -281,8 +291,6 @@ def add_parser(parser):
     
 def run_with(args):
     """ Main program which calls MESA algorithm class"""
-    import numpy as np
-
     manifestFilename = args.manifest
     outputPrefix = args.output_prefix
 
