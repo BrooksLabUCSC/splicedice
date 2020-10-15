@@ -101,9 +101,9 @@ class MESA:
             with open(sample.filename,"r") as junctionFile:
                 for line in junctionFile:
                     row = line.rstrip().split("\t")
-                    chromosome,left,right = row[0], int(row[1])-1 ,int(row[2])
 
                     if sample.type is "SJ":
+                        chromosome,left,right = row[0], int(row[1])-1 ,int(row[2])
                         strand = strandSymbol[row[3]]
                         intronMotif,annotation,unique,multi,overhang = [int(x) for x in row[4:]]
                         if self.args.noMultimap:
@@ -114,14 +114,15 @@ class MESA:
                         if (right-left < self.args.maxLength and 
                             right-left > self.args.minLength and
                             strand is not "undefined" and
-                            score > self.args.minUnique and
+                            score >= self.args.minUnique and
                             intronMotif in validMotifs):
                             
                             junctions.add((chromosome,left,right,strand))
                             
                     elif sample.type is "bed":
-                        score = int(row[4])
-                        strand = int(row[5])
+                        chromosome = row[0]
+                        left,right = int(row[1]),int(row[2])
+                        strand = row[5]
                         junctions.add((chromosome,left,right,strand))
 
 
@@ -166,7 +167,15 @@ class MESA:
                 
                 if sample.type is "bed":
                     for line in sampleFile:
-                        pass
+                        row = line.rstrip().split("\t")
+                        chromosome = row[0]
+                        left,right = int(row[1]),int(row[2])
+                        score = int(row[4])
+                        strand = row[5]
+                        
+                        junction = (chromosome,left,right,strand)
+                        
+                        counts[self.junctionIndex[junction],sampleIndex] = score
                     
                 elif sample.type is "SJ":
                                         
@@ -176,7 +185,7 @@ class MESA:
                         row = line.rstrip().split("\t")
                         chromosome = row[0]
                         left,right,strand,motif,annotation,unique,multi,overhang = (int(x) for x in row[1:])
-                        left -= 1
+                        left = left - 1
                         strand = strandSymbol[strand]
                         junction = (chromosome,left,right,strand)
                                                     
@@ -234,15 +243,15 @@ class MESA:
                 
     def writeAllpsi(self):
         """ """
-        with open(f"{self.outputPrefix}_allPSI.tsv","w") as allpsiTsv:
+        with open(f"{self.outputPrefix}_allPS.tsv","w") as allpsTsv:
             
-            for sample in self.manifest:
-                allpsiTsv.write(sample.name+"\t")
-            allpsiTsv.write("cluster\n")
+            samples = "\t".join([s.name for s in self.manifest])
+            allpsTsv.write(f"cluster\t{samples}\n")
+
             
             for i,junction in enumerate(sorted(self.clusters)):
-                allpsiTsv.write("\t".join([f"{x:.3f}" for x in self.psi[i,:]])+
-                                f"\t{self.junctionString(junction)}\n")
+                psvalues = "\t".join([f"{x:.3f}" for x in self.psi[i,:]])
+                allpsTsv.write(f"{self.junctionString(junction)}\t{psvalues}\n")
                 
     def writeDrimLine(self,i,junction,other,file):
         """Format and output line for drim table"""
@@ -274,11 +283,11 @@ def add_parser(parser):
     parser.add_argument("--output_prefix","-o",
                         action="store",required=True,
                        help="prefix for output filenames") 
-    parser.add_argument("--maxLength",default=50000,
+    parser.add_argument("--maxLength",type=int,default=50000,
                        help="maximum splice junction size")
-    parser.add_argument("--minLength",default=50,
+    parser.add_argument("--minLength",type=int,default=50,
                        help="minimum splice junction size")
-    parser.add_argument("--minOverhang",default=5,
+    parser.add_argument("--minOverhang",type=int,default=5,
                        help="minimum overlap on reads to support splice junction")
     parser.add_argument("--drim",action="store_true",
                        help="create table for use by DRIMSeq")
@@ -286,7 +295,7 @@ def add_parser(parser):
                        help="use only reads that uniquely map to one location")
     parser.add_argument("--filter",default="gtag_only",choices=["gtag_only"],
                        help="donor and acceptor intron sequences to include.")
-    parser.add_argument("--minUnique",default=5,
+    parser.add_argument("--minUnique",type=int,default=5,
                        help="minimum number of unique reads to support splice junction")
     
 def run_with(args):
