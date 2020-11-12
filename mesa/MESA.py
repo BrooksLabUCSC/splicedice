@@ -6,6 +6,7 @@ Mutually Exclusive Splicing Analysis (MESA) main quantification step
 """
 
 import numpy as np
+from time import time
 
 class Sample:
     
@@ -27,6 +28,8 @@ class Sample:
             self.type = "bam"
         else:
             self.type = "unknown"
+            
+        
 
         self.metadata = manifestLine[2]
         self.condition = manifestLine[3]
@@ -35,12 +38,34 @@ class Sample:
             Sample.groups[self.condition].append(self)
         else:
             Sample.groups[self.condition] = [self]
+            
+class Timer:
+    def __init__(self):
+        self.start = time()
+        self.checkpoint = self.start
+        
+    def total(self):
+        passed = time() - self.start
+        hours = int(passed // 3600)
+        minutes = int((passed % 3600) // 60)
+        seconds = passed % 60
+        return f"[{hours}:{minutes:02d}:{seconds:02.2f}]"
+            
+    def check(self):
+        passed = time() - self.checkpoint
+        self.checkpoint = time()
+        hours = int(passed // 3600)
+        minutes = int((passed % 3600) // 60)
+        seconds = passed % 60
+        return f"[{hours}:{minutes:02d}:{seconds:02.2f}]"
+        
+        
                         
         
 class MESA:
-    """ """
+    """Main algorithm for Mutually Exclusive Splicing Analysis"""
     def __init__(self,manifestFilename,outputPrefix,args):
-        """ """
+        """Call methods to get input, process, and write output"""
         # Parsed Arguments: 
         self.args = args
         
@@ -49,28 +74,55 @@ class MESA:
         self.outputPrefix = outputPrefix
                 
         # Construct MESA
+        timer = Timer()
+        print("Parsing manifest...")
         self.manifest = self.parseManifest()
-        self.junctions = self.getAllJunctions()
-        self.clusters = self.getClusters()
+        print("\tDone",timer.check())
         
-        #
-        self.junctionIndex = {junction:i for i,junction in enumerate(sorted(self.clusters))}
+        print(f"Getting all junctions from {len(self.manifest)} files...")
+        #print(f"Getting all junctions from {len(self.manifest)} files...",end=' ')
+        self.junctions = self.getAllJunctions()
+        print("\tDone",timer.check())
 
+        
+        print(f"Finding clusters from {len(self.junctions)} junctions...")
+        self.clusters = self.getClusters()
+        self.junctionIndex = {junction:i for i,junction in enumerate(sorted(self.clusters))}
+        print("\tDone",timer.check())
+        
         # Write tsv file
+        print("Writing cluster file...")
         self.writeClusters()
+        print("\tDone",timer.check())
         
         # Write bed file
+        print("Writing junction bed file...")
         self.writeJunctionBed()
+        print("\tDone",timer.check())
         
         # Quantify MESA
-        self.counts = self.getJunctionCounts()
-        self.psi = self.calculatePsi()
+        print("Gathering junction counts...")
+        self.counts, self.low = self.getJunctionCounts()
+        print("\tDone",timer.check())
         
+        print("Writing inclusion counts...")
         self.writeInclusions()
+        print("\tDone",timer.check())
+        
+        print("Calculating PS values...")
+        self.psi = self.calculatePsi()
+        print("\tDone",timer.check())
+        
+        print("Writing PS values...")
         self.writeAllpsi()
+        print("\tDone",timer.check())
         
         if self.args.drim:
+            print("Writing drim table...")
             self.writeDrimTable()
+            print("\tDone",timer.check())
+        
+        print("All done",timer.total())
         
         
     def parseManifest(self):
@@ -89,7 +141,8 @@ class MESA:
     def getAllJunctions(self):
         """Read junctions from SJ_out_tab"""
         
-        strandSymbol = {"0":"undefined", "1":"+", "2":"-", "+":"+", "-":"-"}
+        strandSymbol = {"0":"0", "1":"+", "2":"-", "+":"+", "-":"-"}
+        plusminus = {"+","-"}
         
         filters = {"gtag_only":{1,2}, "gc_at":{1,2,3,4,5}, "all":{0,1,2,3,4,5,6}}
         validMotifs = filters[self.args.filter]
@@ -99,36 +152,47 @@ class MESA:
         # Read all sample files from manifest
         for sample in self.manifest:
             with open(sample.filename,"r") as junctionFile:
-                for line in junctionFile:
-                    row = line.rstrip().split("\t")
-
-                    if sample.type is "SJ":
-                        chromosome,left,right = row[0], int(row[1])-1 ,int(row[2])
+                
+                if sample.type is "SJ":
+                    for line in junctionFile:
+                        row = line.rstrip().split("\t")
+                        chromosome= row[0]
+                        left = int(row[1]) - 1
+                        right = int(row[2])
                         strand = strandSymbol[row[3]]
-                        intronMotif,annotation,unique,multi,overhang = [int(x) for x in row[4:]]
+                        intronMotif = int(row[4])
+                        #annotation = int(row[5])
+                        #overhang = int(row[8])
                         if self.args.noMultimap:
-                            score = unique
+                            score = int(row[6])
                         else:
-                            score = unique + multi
-                            
+                            score = int(row[6]) + int(row[7]) 
                         if (right-left < self.args.maxLength and 
                             right-left > self.args.minLength and
-                            strand is not "undefined" and
+                            strand != "0" and
                             score >= self.args.minUnique and
                             intronMotif in validMotifs):
-                            
                             junctions.add((chromosome,left,right,strand))
                             
-                    elif sample.type is "bed":
-                        chromosome = row[0]
-                        left,right = int(row[1]),int(row[2])
+                elif sample.type is "bed":
+                    for line in junctionFile:
+                        row = line.rstrip().split("\t")
+
+                        score = int(row[4])
+                        if score < self.args.minUnique:
+                            continue
+                             
+                        left = int(row[1])
+                        right = int(row[2])
+                        length = right-left
+                        if length > self.args.maxLength or length < self.args.minLength:    
+                            continue
+                            
                         strand = row[5]
-                        junctions.add((chromosome,left,right,strand))
-
-
-                    # Include only high quality junctions
-
-                        
+                        if strand in plusminus:
+                            chromosome = row[0]
+                            junctions.add((chromosome,left,right,strand))
+                            
         return junctions
         
     def getClusters(self):
@@ -160,7 +224,9 @@ class MESA:
             
     def getJunctionCounts(self):
         """ """
-        counts = np.zeros((len(self.clusters),len(self.manifest)))
+        counts = np.zeros((len(self.clusters),len(self.manifest)),dtype='float32')
+        low = []
+        
         for sampleIndex,sample in enumerate(self.manifest):
             
             with open(sample.filename,"r") as sampleFile:
@@ -168,38 +234,37 @@ class MESA:
                 if sample.type is "bed":
                     for line in sampleFile:
                         row = line.rstrip().split("\t")
-                        chromosome = row[0]
-                        left,right = int(row[1]),int(row[2])
-                        score = int(row[4])
-                        strand = row[5]
-                        
-                        junction = (chromosome,left,right,strand)
-                        
-                        counts[self.junctionIndex[junction],sampleIndex] = score
+
+                        junction = (row[0], int(row[1]), int(row[2]), row[5])
+                            
+                        if junction in self.junctionIndex:
+                            score = int(row[4])
+                            counts[self.junctionIndex[junction],sampleIndex] = score
+                            if self.args.lowCoverageNan and score < self.args.minUnique:
+                                low.append((self.junctionIndex[junction],sampleIndex))
                     
                 elif sample.type is "SJ":
                                         
-                    strandSymbol = {0:"undefined", 1:"+", 2:"-"}
+                    strandSymbol = {'0':'0', '1':'+', '2':'-'}
                     
                     for line in sampleFile:
                         row = line.rstrip().split("\t")
-                        chromosome = row[0]
-                        left,right,strand,motif,annotation,unique,multi,overhang = (int(x) for x in row[1:])
-                        left = left - 1
-                        strand = strandSymbol[strand]
-                        junction = (chromosome,left,right,strand)
+
+                        junction = (row[0], int(row[1])-1, int(row[2]), strandSymbol[row[3]])
+
                                                     
                         if junction in self.junctionIndex:
                             if self.args.noMultimap:
-                                counts[self.junctionIndex[junction],sampleIndex] = unique
+                                counts[self.junctionIndex[junction],sampleIndex] = int(row[6])
                             else:
-                                counts[self.junctionIndex[junction],sampleIndex] = unique + multi
+                                counts[self.junctionIndex[junction],sampleIndex] = int(row[6]) + int(row[7]) 
+                          
 
-        return counts
+        return counts, low
                         
     def calculatePsi(self):
         """ """
-        psi = np.zeros((len(self.clusters),len(self.manifest)))
+        psi = np.zeros((len(self.clusters),len(self.manifest)),dtype='float32')
         for junction in sorted(self.clusters):
             chromosome,left,right,strand = junction
             inclusions = self.counts[self.junctionIndex[junction],:]
@@ -207,6 +272,9 @@ class MESA:
             for excluded in self.clusters[junction]:
                 exclusions += self.counts[self.junctionIndex[excluded],:]
             psi[self.junctionIndex[junction],:] = inclusions / (inclusions + exclusions)
+        if self.args.lowCoverageNan:
+            for junctionIndex,sampleIndex in self.low:
+                psi[junctionIndex,sampleIndex] = np.nan          
         return psi
 
     def junctionString(self,junction):
@@ -231,18 +299,19 @@ class MESA:
                 
     def writeInclusions(self):
         """ """
+        tab = '\t'
         with open(f"{self.outputPrefix}_inclusionCounts.tsv","w") as inclusionTsv:
             
             inclusionTsv.write("\t".join([s.name for s in self.manifest]))
             inclusionTsv.write("\tcluster\n")
             
             for i,junction in enumerate(sorted(self.clusters)):
-                inclusionTsv.write("\t".join(self.counts[i,:].astype('str')))
-                inclusionTsv.write(f"\t{self.junctionString(junction)}\n")
+                inclusionTsv.write(f"{self.junctionString(junction)}\t{tab.join([f'{x:.0f}' for x in self.counts[i,:]])}\n")
                 
                 
     def writeAllpsi(self):
         """ """
+        tab = '\t'
         with open(f"{self.outputPrefix}_allPS.tsv","w") as allpsTsv:
             
             samples = "\t".join([s.name for s in self.manifest])
@@ -250,8 +319,7 @@ class MESA:
 
             
             for i,junction in enumerate(sorted(self.clusters)):
-                psvalues = "\t".join([f"{x:.3f}" for x in self.psi[i,:]])
-                allpsTsv.write(f"{self.junctionString(junction)}\t{psvalues}\n")
+                allpsTsv.write(f"{self.junctionString(junction)}\t{tab.join([f'{x:.3f}' for x in self.psi[i,:]])}\n")
                 
     def writeDrimLine(self,i,junction,other,file):
         """Format and output line for drim table"""
@@ -296,7 +364,9 @@ def add_parser(parser):
     parser.add_argument("--filter",default="gtag_only",choices=["gtag_only"],
                        help="donor and acceptor intron sequences to include.")
     parser.add_argument("--minUnique",type=int,default=5,
-                       help="minimum number of unique reads to support splice junction")
+                        help="minimum number of unique reads to support splice junction")
+    parser.add_argument("--lowCoverageNan",action="store_true",
+                        help="Report NaN for splicing events with coverage below minUnique")
     
 def run_with(args):
     """ Main program which calls MESA algorithm class"""
