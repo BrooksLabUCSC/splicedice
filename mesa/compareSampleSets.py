@@ -144,6 +144,7 @@ def run_with(args):
         pvals.append(pval)
 
     # correct pvals
+    print(*["p-value","corrected_p-value","event","diff_mean"], sep='\t')
     corrected = multipletests(pvals, method="fdr_bh")[1]
     for n, i in enumerate(testedEvents):
-        print(pvals[n], corrected[n], i[0], i[1])
+        print(*[pvals[n],corrected[n],i[0],i[1]], sep='\t')
