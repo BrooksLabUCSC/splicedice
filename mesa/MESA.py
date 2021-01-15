@@ -309,10 +309,8 @@ class MESA:
         """ """
         tab = '\t'
         with open(f"{self.outputPrefix}_inclusionCounts.tsv","w") as inclusionTsv:
-            
-<<<<<<< HEAD
             inclusionTsv.write(f"cluster\t{tab.join([s.name for s in self.manifest])}\n")
->>>>>>> 04606dbd01ac1ecd814f58f3ea73e48e4e0c3f63
+
             
             for i,junction in enumerate(sorted(self.clusters)):
                 inclusionTsv.write(f"{self.junctionString(junction)}\t{tab.join([f'{x:.0f}' for x in self.counts[i,:]])}\n")
