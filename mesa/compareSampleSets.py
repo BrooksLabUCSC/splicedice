@@ -116,11 +116,28 @@ def run_with(args):
         sys.exit(1)
 
     # load psi
-    data = loadNPZ(pmesa)
+    #data = loadNPZ(pmesa)
 
     # table has 3 arrays, cols, rows and data
-    cols, rows, matrix = data["cols"], data["rows"], data["data"]
+    #cols, rows, matrix = data["cols"], data["rows"], data["data"]
 
+    
+    ######
+    rows = []
+    data = []
+    with open(pmesa) as tsv:
+        headers = tsv.readline().strip().split('\t')[1:]
+        for line in tsv:
+            row = line.strip().split('\t')
+            rows.append(row[0])
+            data.append(row[1:])
+            
+    matrix = np.array(data,dtype="float32")
+    rows = np.array(rows)
+    cols = np.array(headers)
+    
+
+    
     # get sample indices
     g1Indices = getColIndexFromArray(g1, cols)
     g2Indices = getColIndexFromArray(g2, cols)
@@ -140,10 +157,11 @@ def run_with(args):
             continue
 
         D, pval = ranksums(d1, d2)
-        testedEvents.append((rows[n], np.mean(data1) - np.mean(data2)))
+        testedEvents.append((rows[n], np.median(data1) - np.median(data2)))
         pvals.append(pval)
 
     # correct pvals
     corrected = multipletests(pvals, method="fdr_bh")[1]
+    print("p-value\tcorrected\tevent\tdelta")
     for n, i in enumerate(testedEvents):
-        print(pvals[n], corrected[n], i[0], i[1])
+        print(pvals[n], corrected[n], i[0], i[1],sep='\t')

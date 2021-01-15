@@ -22,6 +22,10 @@ class Sample:
         # Check filetype
         if self.filename.upper().endswith(".BED"):
             self.type = "bed"
+            with open(self.filename) as bedfile:
+                info = bedfile.readline().split('\t')[3].split(';')
+                if info[0].startswith("e:") and info[1].startswith("o:"):
+                    self.type = "mesabed"
         elif self.filename.upper().endswith("SJ.OUT.TAB"):
             self.type = "SJ"
         elif self.filename.upper().endswith(".BAM"):
@@ -153,7 +157,7 @@ class MESA:
         for sample in self.manifest:
             with open(sample.filename,"r") as junctionFile:
                 
-                if sample.type is "SJ":
+                if sample.type == "SJ":
                     for line in junctionFile:
                         row = line.rstrip().split("\t")
                         chromosome= row[0]
@@ -174,7 +178,7 @@ class MESA:
                             intronMotif in validMotifs):
                             junctions.add((chromosome,left,right,strand))
                             
-                elif sample.type is "bed":
+                elif sample.type == "bed" or sample.type == "mesabed":
                     for line in junctionFile:
                         row = line.rstrip().split("\t")
 
@@ -187,7 +191,11 @@ class MESA:
                         length = right-left
                         if length > self.args.maxLength or length < self.args.minLength:    
                             continue
-                            
+                        info = [x.split(':') for x in row[3].split(';')]
+                        if int(info[1][1]) < self.args.minOverhang:
+                            continue
+                        if float(info[0][1]) < self.args.minEntropy or float(info[0][2]) < self.args.minEntropy:
+                            continue
                         strand = row[5]
                         if strand in plusminus:
                             chromosome = row[0]
@@ -231,12 +239,12 @@ class MESA:
             
             with open(sample.filename,"r") as sampleFile:
                 
-                if sample.type is "bed":
+                if sample.type is "bed" or sample.type is "mesabed":
                     for line in sampleFile:
                         row = line.rstrip().split("\t")
 
                         junction = (row[0], int(row[1]), int(row[2]), row[5])
-                            
+                        
                         if junction in self.junctionIndex:
                             score = int(row[4])
                             counts[self.junctionIndex[junction],sampleIndex] = score
@@ -302,8 +310,7 @@ class MESA:
         tab = '\t'
         with open(f"{self.outputPrefix}_inclusionCounts.tsv","w") as inclusionTsv:
             
-            inclusionTsv.write("\t".join([s.name for s in self.manifest]))
-            inclusionTsv.write("\tcluster\n")
+            inclusionTsv.write(f"cluster\t{tab.join([s.name for s in self.manifest])}\n")
             
             for i,junction in enumerate(sorted(self.clusters)):
                 inclusionTsv.write(f"{self.junctionString(junction)}\t{tab.join([f'{x:.0f}' for x in self.counts[i,:]])}\n")
@@ -367,6 +374,8 @@ def add_parser(parser):
                         help="minimum number of unique reads to support splice junction")
     parser.add_argument("--lowCoverageNan",action="store_true",
                         help="Report NaN for splicing events with coverage below minUnique")
+    parser.add_argument("--minEntropy",type=float,default=1,
+                        help="Shannon's diversity index associated with a junction, minumum required for inclusion [Default 1]")
     
 def run_with(args):
     """ Main program which calls MESA algorithm class"""
