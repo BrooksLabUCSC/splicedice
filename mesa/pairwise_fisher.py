@@ -20,54 +20,34 @@
 ########################################################################
 
 
-def loadNPZ(x):
-    """
-    takes in npz formatted matrix.
-    """
-
-    try:
-        data = np.load(x)
-    except:
-        print("ERR ** Cannot load matrix %s. Check path or format." % x)
-        sys.exit(1)
-    return data
+import numpy as np
 
 
-def getColIndexFromArray(x, y):
-    """
-    takes in list of strings = x
-    and finds list index in array = y
-    """
-
-    return np.nonzero(np.isin(y, x))
-
-
-def returnSamplesFromManifest(x):
-    """
-    reads in mesa formatted manifest
-    returns list of samples
-    """
-    s = list()
-    with open(x) as fin:
-        for i in fin:
-            s.append(i.split()[0])
-
-    return s
-
-
-def getClust(fname):
-    data = dict()
-    with open(fname) as fin:
-        for i in fin:
+def getClusters(filename):
+    clusters = {}
+    with open(filename) as allClusters:
+        for line in allClusters:
             try:
-                left, right = i.rstrip().split()
-                mxes = right.split(",")
+                event, mxes = line.rstrip().split()
+                mxes = mxes.split(",")
             except ValueError:
-                left = i.strip()
+                event = line.strip()
                 mxes = []
             
-            data[left] = mxes
-    return data
+            clusters[event] = mxes
+    return clusters
+
+def getEventCounts(filename):
+    events = []
+    counts = []
+    with open(filename) as tsv:
+        samples = tsv.readline().rstrip().split("\t")[:-1]
+        for line in tsv:
+            row = line.rstrip().split("\t")
+            events.append(row[-1])
+            counts.append(row[:-1])
+    counts = np.array(counts,dtype=float)
+    return samples,events,counts
 
 
 ########################################################################
@@ -77,32 +57,28 @@ def getClust(fname):
 ########################################################################
 
 def add_parser(parser):
-    parser.add_argument(
-        "--inclusionMESA",
-        type=str,
-        required=True,
-        help="Compressed NPZ formatted Inclusion count matrix from quantMESA.",
-    )
-    parser.add_argument(
-        "-c",
-        "--clusters",
-        type=str,
-        required=True,
-        help="Clusters table.",
-    )
-    parser.add_argument(
-        "--chi2",
-        action="store_true",
-        default=False,
-        help="Use X^2 instead of fishers. Quicker, not as sensitive.",
-    )
-    parser.add_argument(
-        "--no-correction",
-        action="store_true",
-        default=False,
-        help="Output raw p-values instead of corrected ones. Correction is "
-        "done via Benjamini-Hochberg",
-    )
+    parser.add_argument("--inclusionMESA",
+        type=str, required=True,
+        help="Compressed NPZ formatted Inclusion count matrix from quantMESA.")
+    
+    parser.add_argument("-c", "--clusters",
+        type=str, required=True,
+        help="Clusters table.")
+    
+    parser.add_argument("--chi2",
+        action="store_true", default=False,
+        help="Use X^2 instead of fishers. Quicker, not as sensitive.")
+    
+    parser.add_argument( "--multiple_test_correction",
+        default="pairwise",choices=["pairwise","all","none"],
+        help="Correction via Benjamini-Hochberg. Options are "
+                                    "[pairwise (default): all p-values per sample pair; "
+                                    "all: all p-values for every sample pair together;\n"
+                                    "none: no multiple test correction]")
+    
+    parser.add_argument("-o", "--output",
+        default="pairwise.tsv",
+        help="tab-separated output filename (default uses input prefix)")
 
 
 def run_with(args):
@@ -114,89 +90,85 @@ def run_with(args):
     from scipy.stats import chi2_contingency
     from statsmodels.stats.multitest import multipletests
     
-    pmesa = args.inclusionMESA
-    cmesa = args.clusters
+    # Input file arguments
+    inclusionCounts = args.inclusionMESA
+    allClusters = args.clusters
+    outfilename = args.output
+    
+    
     if args.chi2:
         test_method = chi2_contingency
     else:
         test_method = fisher_exact
 
-    # load psi
+    samples,events,counts = getEventCounts(inclusionCounts)
+    print("Counts loaded from",inclusionCounts,"...")
+    clusters = getClusters(allClusters)
+    print("Clusters loaded from",allClusters,"...")
+    pairs = []
+    for i in range(len(samples)-1):
+        for j in range(i+1,len(samples)):
+            pairs.append((i,j))
+
+    columns = [f"{samples[a]}_{samples[b]}" for a,b in pairs]
+    print("Analyzing pairs:")
+    print(",".join(columns))
+
+
+
+    totaln = len(events)
+    parray = []
     
-    ###### DENNIS
-    #data = loadNPZ(pmesa)
-    rows = []
-    matrix = []
-    with open(pmesa) as tsv:
-        cols = tsv.readline().rstrip().split("\t")[:-1]
-        for line in tsv:
-            row = line.rstrip().split("\t")
-            rows.append(row[-1])
-            matrix.append(row[:-1])
-    matrix = np.array(matrix,dtype=float)
-    rows = np.array(rows)
-    ######     
-    
-    
-    clusters = getClust(cmesa)
+    for n, inclusions in enumerate(counts):
 
-    # table has 3 arrays, cols, rows and data
-    ###### cols, rows, matrix = data["cols"], data["rows"], data["data"]
+        if n % 50 == 0:
+            print(f"[{n} / {totaln}] events analyzed...")
+        mxes = counts[np.isin(events, clusters[events[n]])]
 
-    comparisons = set()
-    for i, v in enumerate(cols):
-        for j, v in enumerate(cols):
-            if i == j:
-                continue
-            comparisons.add(tuple(sorted([i, j])))
+        exclusions = np.sum(mxes, axis=0)
 
-    # do the math
-    comps = list(comparisons)
+        pvalues = []
 
-    
 
-    print(
-        "clusterID",
-        "\t".join("%s_%s" % (cols[j[0]], cols[j[1]]) for j in comps),
-        sep="\t",
-    )
-
-    for n, vals in enumerate(matrix):
-        event_id = rows[n]
-        mxes = matrix[np.isin(rows, clusters[event_id])]
-
-        inc = vals
-        exc = np.sum(mxes, axis=0)
-
-        pvalues = list()
-
-        if event_id == "chrIS:2363757-2380162":
-            print(event_id,file=sys.stderr)
-            print(mxes,file=sys.stderr)
-            print(inc,file=sys.stderr)
-            print(exc,file=sys.stderr)
-            
-        for i in comps:
-            left, right = i
-            table = [[inc[left], inc[right]], [exc[left], exc[right]]]
+        for a,b in pairs:
+            table = [[inclusions[a], inclusions[b]], [exclusions[a], exclusions[b]]]
 
             # chi^2 test will fail on contingency tables where any column or
             # rows are zero, but not if diagonal is zero
             # [[0, 0], [2, 3]] fail
             # [[0, 2], [0, 3]] fail
             # [[0, 2], [2, 0]] still valid
-            if args.chi2:
-                col_total = [inc[left] + inc[right], exc[left] + exc[right]]
-                row_total = [inc[left] + exc[left], inc[right] + exc[right]]
-                if any(count == 0 for count in row_total + col_total):
-                    continue
 
-            data = test_method(table)[1]
-            pvalues.append(data)
-        if not args.no_correction and len(pvalues) > 0:
-            pvalues = multipletests(pvalues, method="fdr_bh")[1]
-        print(event_id, "\t".join(str(x) for x in pvalues), sep="\t")
+            #if args.chi2:
+            #    col_total = [inclusions[a] + inclusions[b], exclusions[a] + exclusions[b]]
+            #    row_total = [inclusions[a] + exclusions[a], inclusions[b] + exclusions[b]]
+            #    if any(count == 0 for count in row_total + col_total):
+            #        continue
 
+            pvalues.append(test_method(table)[1])
+        parray.append(pvalues)
+        
+    if args.multiple_test_correction == "all":
+        parray = np.array(parray)
+        shape = parray.shape
+        corrected = multipletests(parray.flatten(), method="fdr_bh")[1]
+        parray = np.array(corrected).reshape(shape)
+    elif args.multiple_test_correction == "pairwise":
+        parray = np.array(parray)
+        for i in range(parray.shape[1]):
+            corrected = multipletests(parray[:,i], method="fdr_bh")[1]
+            parray[:,i]=corrected
+    elif args.multiple_test_correction == "none":
+        pass
+    
+    with open(outfilename,"w") as outfile:
+        tab = "\t"
+        columns = tab.join(f"{samples[a]}_{samples[b]}" for a,b in pairs)
+        outfile.write(f"clusterID\t{columns}\n")
+        for n,pvalues in enumerate(parray):
+            outfile.write(f"{events[n]}\t{tab.join(str(p) for p in pvalues)}\n")
+            
+            
 
 
 if __name__ == "__main__":

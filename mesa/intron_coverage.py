@@ -6,6 +6,13 @@ python3 intron_coverage.py -b bam_manifest.tsv  -m output_allPSI.tsv  -j mesa_ju
 """
 
 
+import time
+import sys
+import os
+import pysam
+import numpy as np
+from multiprocessing import Pool
+
 def add_parser(parser):
     """
     """
@@ -20,9 +27,9 @@ def add_parser(parser):
                         action = 'store', required=True, 
                         help='mesa junction.bed output from mesa')
     parser.add_argument('-s', '--binSize', 
-                        action='store', default=500000, 
+                        action='store', default=500000, type=int,
                         help='chromosome bins for processing (must exceed intron length)')
-    parser.add_argument('-n', '--numThreads', 
+    parser.add_argument('-n', '--numThreads', type=int,
                         action='store', default=1, 
                         help='number of BAM-parsing threads to run concurrently')
 
@@ -38,7 +45,7 @@ class IntronCoverage():
         self.manifest = manifest
         self.mesa = mesa
         self.junctionFilename = junctionFile
-        self.binSize = binsSize
+        self.binSize = binSize
         self.numThreads = numThreads
 
         self.start = time.time()
@@ -220,7 +227,7 @@ class IntronCoverage():
                 juncCounts = ','.join(counts[chrom][i,:].astype(str))
                 median = medians[chrom][i]
                 outfile.write(f"{chromosome}\t{left}\t{right}\t.\t{median}\t{strand}\t{juncPercentiles}\t{juncCounts}\n")
-        print(sample,"done",time.time()-start) 
+        print(sample,"done",time.time()-self.start) 
             
     def getCoveragePool(self):
         samples = list(self.bams.keys())
@@ -240,7 +247,7 @@ def run_with(args):
 
     manifest = args.bamManifest
     mesa = args.mesaTable
-    junctionFilename = args.juncFile
+    junctionFile = args.junctionFile
     binSize = args.binSize
     numThreads = args.numThreads
 
@@ -248,7 +255,7 @@ def run_with(args):
     intronCoverage.parseManifest()
     intronCoverage.getIntronPercentiles()
     intronCoverage.getCoveragePool()
-    print("Your runtime was %s seconds." % (time.time() - start))
+    print("Your runtime was %s seconds." % (time.time() - self.start))
 
 if __name__ == "__main__":
     import argparse

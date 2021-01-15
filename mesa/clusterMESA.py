@@ -25,7 +25,7 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-import umap
+#import umap
 import numpy.ma as ma
 import pandas as pd
 from scipy.cluster.hierarchy import linkage
@@ -195,7 +195,7 @@ def getColorMarkers(data, cols):
         colors = plt.get_cmap("tab10")(np.arange(10, dtype=int))
         # colors = cmap(np.linspace(0, 1, 10))
     elif len(g1) <= 20:
-        cmap = plt.get_cmap("tab20")(np.arange(20, dtype=int))
+        colors = plt.get_cmap("tab20")(np.arange(20, dtype=int))
         # colors = cmap(np.linspace(0, 1, 20))
     else:
         colors = plt.get_cmap("viridis")(np.arange(len(g1), dtype=int))
@@ -205,7 +205,7 @@ def getColorMarkers(data, cols):
 
     # now group2 ( i expect less unique values in this group)
     g2 = np.unique(data[:, 1])
-    markers = [".", "+", "^", "v", "1", "2", "3", "4", "*"]
+    markers = [".","+","^","v","1","2","3","4","*","s","p","x","D","d","X","P","|","_"]
 
     for i in data:
         val1, val2, sampID = i
@@ -252,10 +252,24 @@ def run_with(args):
     pmesa = args.psiMESA
     manifest = args.manifest
 
-    data = loadNPZ(pmesa)
-    cols, rows, matrix = data["cols"], data["rows"], data["data"]
-    mergedMatrix, samps = matrix, cols
+    #data = loadNPZ(pmesa)
+    #cols, rows, matrix = data["cols"], data["rows"], data["data"]
+    #mergedMatrix, samps = matrix, cols
+    #print("Pre filtering shape", mergedMatrix.shape)
+    
+    
+    with open(pmesa) as tsv:
+        samples = tsv.readline().strip().split('\t')[1:]
+        junctions = []
+        ps_values = []
+        for line in tsv:
+            row = line.strip().split('\t')
+            junctions.append(row[0])
+            ps_values.append(row[1:])
+    mergedMatrix = np.array(ps_values,dtype='float32')
+    samps = np.array(samples)
     print("Pre filtering shape", mergedMatrix.shape)
+
 
     # filter events and fill in missing data, otherwise it's all the same?
     N = 0.5
@@ -279,12 +293,15 @@ def run_with(args):
     # get covariates
     # formatting
     groupData = list()
+    sample_set = set(samples)
     with open(manifest) as fin:
         for i in fin:
             info = i.rstrip().split()
             group1, group2 = info[-2], info[-1]
-            groupData.append((group1, group2, info[0]))
+            if info[0] in sample_set:
+                groupData.append((group1, group2, info[0]))
     groupData = np.array(groupData)
+    print(len(set([x[2] for x in groupData]) - set(samples)),len(set([x[2] for x in groupData]).intersection(set(samples))))
     colors, markers, sampsPlots = getColorMarkers(groupData, samps)
 
     # plotting

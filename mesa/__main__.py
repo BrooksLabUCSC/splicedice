@@ -11,6 +11,7 @@ from . import clusterMESA as cm
 from . import findOutliers as fo
 from . import intron_coverage as ic
 from . import ir_table as it
+from . import subset as subset
 
 
 def add_cmd(name, arg_parser_fn, run_with, subparser):
@@ -45,6 +46,7 @@ def main():
     add_cmd("compare_sample_sets", css.add_parser, css.run_with, subparsers)
     add_cmd("pairwise", pf.add_parser, pf.run_with, subparsers)
     add_cmd("findOutliers", fo.add_parser, fo.run_with, subparsers)
+    add_cmd("subset", subset.add_parser, subset.run_with, subparsers)
 
     args = parser.parse_args()
 
