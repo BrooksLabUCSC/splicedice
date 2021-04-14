@@ -114,8 +114,10 @@ class BamToJuncBed:
                     strand = "-"
 
             blocks = read.get_blocks()
-
-            read_start = blocks[0][0]
+            try:
+                read_start = blocks[0][0]
+            except IndexError:
+                continue
             read_end = blocks[-1][1]
             for i in range(len(blocks)-1):
                 junction = (read.reference_name,blocks[i][1],blocks[i+1][0],strand)

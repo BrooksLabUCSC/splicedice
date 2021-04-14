@@ -178,7 +178,7 @@ class MESA:
                             intronMotif in validMotifs):
                             junctions.add((chromosome,left,right,strand))
                             
-                elif sample.type == "bed" or sample.type == "mesabed":
+                elif sample.type == "mesabed":
                     for line in junctionFile:
                         row = line.rstrip().split("\t")
 
@@ -195,6 +195,24 @@ class MESA:
                         if int(info[1][1]) < self.args.minOverhang:
                             continue
                         if float(info[0][1]) < self.args.minEntropy or float(info[0][2]) < self.args.minEntropy:
+                            continue
+                        strand = row[5]
+                        if strand in plusminus:
+                            chromosome = row[0]
+                            junctions.add((chromosome,left,right,strand))
+                            
+                elif sample.type == "bed":
+                    for line in junctionFile:
+                        row = line.rstrip().split("\t")
+
+                        score = int(row[4])
+                        if score < self.args.minUnique:
+                            continue
+                             
+                        left = int(row[1])
+                        right = int(row[2])
+                        length = right-left
+                        if length > self.args.maxLength or length < self.args.minLength:    
                             continue
                         strand = row[5]
                         if strand in plusminus:
