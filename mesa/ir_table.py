@@ -10,7 +10,7 @@ def add_parser(parser):
                         help="")
     parser.add_argument("-c","--clusters",
                         action="store",
-                        help="allClusters.tsv file with mutually exclusive clusters for each junction")
+                        help="allClusters.tsv file with mutually exclusive clusters for each junction.")
 
     parser.add_argument("-d","--coverageDirectory",
                         action="store",
@@ -18,7 +18,12 @@ def add_parser(parser):
     parser.add_argument("-o","--outputPrefix",
                         action="store",
                         help="")
-
+    parser.add_argument("-r","--makeRSDtable",
+                        action="store_true",
+                        help="Make a table of relative standard deviations in coverage across intron.")
+    parser.add_argument("-s","--singleJunctionCalculation",
+                        action="store_true",
+                        help="Calculate IR value using individual junction counts, and not count of all junctions in cluster.")
 def getInclusionCounts(filename):
     with open(filename) as inclusionCounts:
         header = inclusionCounts.readline().strip().split("\t")
@@ -41,7 +46,7 @@ def getClusters(filename):
                 clusters[row[0]] = []
     return clusters
 
-def calculateIR(samples,coverageDirectory,counts,clusters):
+def calculateIR(samples,coverageDirectory,counts,clusters,args):
     IR = {}
     coverage = {}
     junctions = set()
@@ -57,19 +62,21 @@ def calculateIR(samples,coverageDirectory,counts,clusters):
         with open(filename) as percentileCoverage:
             for line in percentileCoverage:
                 row = line.strip().split("\t")
-                cluster = f"{row[0]}:{row[1]}-{row[2]}"
+                cluster = f"{row[0]}:{row[1]}-{row[2]}:{row[5]}"
                 junctions.add(cluster)
                 median = float(row[4])
                 coverage[sample][cluster] = row[-1].split(",")
                 covArray = np.array(coverage[sample][cluster]).astype(np.float)
-                RSD[sample][cluster] = np.std(covArray) / np.mean(covArray)
+                if args.makeRSDtable:
+                    RSD[sample][cluster] = np.std(covArray) / np.mean(covArray)
                 try:
                     intronCount = counts[sample][cluster]
-                    for mxCluster in clusters[cluster]:
-                        try:
-                            intronCount += counts[sample][mxCluster]
-                        except KeyError:
-                            print("mxCluster",sample,cluster,mxCluster)
+                    if not args.singleJunctionCalculation:
+                        for mxCluster in clusters[cluster]:
+                            try:
+                                intronCount += counts[sample][mxCluster]
+                            except KeyError:
+                                print("mxCluster",sample,cluster,mxCluster)
                     try:
                         IR[sample][cluster] = median/(median+intronCount)
                     except ZeroDivisionError:
@@ -77,6 +84,7 @@ def calculateIR(samples,coverageDirectory,counts,clusters):
                 except KeyError:
                     print("cluster",sample,cluster)
                     break
+    
     return junctions, IR, RSD
 
 
@@ -100,7 +108,8 @@ def writeRSDtable(samples, outputPrefix, junctions, RSD):
 
 def run_with(args):
     """ """
-
+    import time
+    start = time.time()
 
     countFile = args.inclusionCounts
     clusterFilename = args.clusters
@@ -108,14 +117,19 @@ def run_with(args):
     outputPrefix = args.outputPrefix
 
     samples = [s.rstrip("intron_coverage.txt") for s in os.listdir(coverageDirectory) if s.endswith("intron_coverage.txt")]
-
+    print("Gathering inclusion counts and clusters...")
     counts = getInclusionCounts(countFile)
-    clusters = getClusters(clusterFilename)
-
-    junctions, IR, RSD = calculateIR(samples,coverageDirectory,counts,clusters)
-
+    if not args.singleJunctionCalculation:
+        clusters = getClusters(clusterFilename)
+    else:
+        clusters = None
+    print("Calculating IR values...")
+    junctions, IR, RSD = calculateIR(samples,coverageDirectory,counts,clusters,args)
+    print("Done",time.time()-start)
+    print("Writing output...")
     writeIRtable(samples, outputPrefix, junctions, IR)
-    writeRSDtable(samples, outputPrefix, junctions, RSD)
+    if args.makeRSDtable:
+        writeRSDtable(samples, outputPrefix, junctions, RSD)
 
 
 if __name__ == "__main__":

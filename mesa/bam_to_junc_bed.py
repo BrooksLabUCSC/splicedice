@@ -96,7 +96,15 @@ class BamToJuncBed:
         
         
         samplename, filename, metadata, condition, bedfilename = sample
-        genome = pysam.AlignmentFile(filename)
+        
+        #genome = pysam.AlignmentFile(filename)
+        #############
+        try:
+            genome = pysam.AlignmentFile(filename)
+        except ValueError:
+            print("Using: pysam.AlignmentFile(filename,check_sq=False) with",filename)
+            genome = pysam.AlignmentFile(filename,check_sq=False)
+        ##############
         counts = {}
         leftDiversity = {}
         rightDiversity = {}

@@ -244,6 +244,8 @@ def run_with(args):
     import pysam
     import numpy as np
     from multiprocessing import Pool
+    
+    start_time = time.time()
 
     manifest = args.bamManifest
     mesa = args.mesaTable
@@ -255,7 +257,7 @@ def run_with(args):
     intronCoverage.parseManifest()
     intronCoverage.getIntronPercentiles()
     intronCoverage.getCoveragePool()
-    print("Your runtime was %s seconds." % (time.time() - self.start))
+    print("Your runtime was %s seconds." % (time.time() - start_time))
 
 if __name__ == "__main__":
     import argparse

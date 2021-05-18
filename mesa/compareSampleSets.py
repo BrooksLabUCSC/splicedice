@@ -29,17 +29,68 @@ from statsmodels.stats.multitest import multipletests
 ########################################################################
 
 
-def loadNPZ(x):
-    """
-    takes in npz formatted matrix.
-    """
+def getAnnotated(annotation):
+    gid_coords = {}
+    gene_coords = {}
+    genes = {}
+    transcripts = {}
 
-    try:
-        data = np.load(x)
-    except:
-        print("ERR ** Cannot load matrix %s. Check path or format." % x)
-        sys.exit(1)
-    return data
+    with open(annotation) as gtf:
+        for line in gtf:
+
+            if line.startswith("#"):
+                continue
+
+            row = line.rstrip().split('\t')
+            info = [x.split('"') for x in row[8].split(';')]
+            chrom = row[0]
+            strand = row[6]
+
+            start = int(row[3])
+            stop = int(row[4])-1
+
+            if row[2] == "transcript":
+                tid =  [x[1] for x in info if 'transcript_id' in x[0]][0]
+                gene_name = [x[1] for x in info if 'gene_name' in x[0]][0]
+                genes[tid] = gene_name
+                transcripts[(tid,chrom,strand)] = []
+
+            elif row[2] == "exon":
+                tid =  [x[1] for x in info if 'transcript_id' in x[0]][0]
+                transcripts[(tid,chrom,strand)].append((start,stop))
+
+            elif row[2] == "gene":
+                gene_name = [x[1] for x in info if 'gene_name' in x[0]][0]
+                gid = [x[1] for x in info if 'gene_id' in x[0]][0]
+                try:
+                    try:
+                        gene_coords[(chrom,strand)] [(start,stop)].append(gene_name)
+                    except KeyError:    
+                        gene_coords[(chrom,strand)] [(start,stop)] = [gene_name]
+
+                    try:
+                        gid_coords[(chrom,strand)] [(start,stop) ].append(gid)
+                    except KeyError:
+                        gid_coords[(chrom,strand)] [(start,stop) ] = [gid]
+                except KeyError:
+                    gene_coords[(chrom,strand)] = {(start,stop) : [gene_name]}
+                    gid_coords[(chrom,strand)] = {(start,stop) : [gid]}              
+                
+    annotated = {}
+    transcript_ids = {}
+    for transcript,exons in transcripts.items():
+        tid,chromosome,strand = transcript
+        for i in range(len(exons)-1):
+            junction = (chromosome,exons[i][1],exons[i+1][0],strand)
+            if junction in annotated:
+                if genes[tid] not in annotated[junction]:
+                    annotated[junction].append(genes[tid])
+                    transcript_ids[junction].append(tid)
+            else:
+                annotated[junction] = [genes[tid]]
+                transcript_ids[junction] = [tid]
+
+    return annotated,gene_coords,transcript_ids
 
 
 def getColIndexFromArray(x, y):
@@ -91,6 +142,22 @@ def add_parser(parser):
         required=True,
         help="Manifest containing samples for sample set group2",
     )
+    parser.add_argument(
+        "-a",
+        "--annotation",
+        type=str,
+        required=False,
+        default="",
+        help="Optional GTF file to label known splice junctions and genes",
+    )
+    parser.add_argument(
+        "-o",
+        "--outputFile",
+        type=str,
+        required=True,
+        help="Output filename for tab-separated table",
+    )
+
 
 
 def run_with(args):
@@ -157,11 +224,47 @@ def run_with(args):
             continue
 
         D, pval = ranksums(d1, d2)
-        testedEvents.append((rows[n], np.median(data1) - np.median(data2)))
+        med1 = np.median(data1)
+        med2 = np.median(data2)
+        mean1 = np.mean(data1)
+        mean2 = np.mean(data2)
+        testedEvents.append((rows[n], med1, med2, mean1, mean2, med1-med2))
         pvals.append(pval)
 
     # correct pvals
     corrected = multipletests(pvals, method="fdr_bh")[1]
-    print("p-value\tcorrected\tevent\tdelta")
-    for n, i in enumerate(testedEvents):
-        print(pvals[n], corrected[n], i[0], i[1],sep='\t')
+    
+    with open(args.outputFile,"w") as tsv:
+        if args.annotation:
+            print("event\tmean1\tmean2\tmedian1\tmedian2\tdelta\tp-value\tcorrected\tgene\toverlapping\ttranscript_id",file=tsv)
+
+            annotated,gene_coords,transcript_ids = getAnnotated(args.annotation)
+            for n, event in enumerate(testedEvents):
+                name,med1,med2,mean1,mean2,delta = event
+
+                chromosome,coords,strand = name.split(":")
+                start,stop = [int(x) for x in coords.split("-")]
+
+                start -= 1
+                stop += 1
+
+                junction = (chromosome,start,stop,strand)
+
+                overlaps = []
+                try:
+                    for gene_start, gene_stop in gene_coords[(chromosome,strand)].keys():
+                        if (start >= gene_start and start <= gene_stop) or (stop >= gene_start and stop <= gene_stop):
+                            overlaps.extend(gene_coords[(chromosome,strand)][gene_start,gene_stop])
+                except KeyError:
+                    pass
+
+                print(name,mean1,mean2,med1,med2,delta, pvals[n], corrected[n], 
+                      ','.join(annotated.get(junction,["nan"])), ','.join(overlaps),
+                      ','.join(transcript_ids.get(junction,["nan"])),
+                      sep='\t',file=tsv)
+    
+        else:
+            print("event\tmean1\tmean2\tmedian1\tmedian2\tdelta\tp-value\tcorrected",file=tsv)
+            for n,event in enumerate(testedEvents):
+                name,med1,med2,mean1,mean2,delta = event
+                print(name,mean1,mean2,med1,med2,delta, pvals[n], corrected[n], sep='\t',file=tsv)
