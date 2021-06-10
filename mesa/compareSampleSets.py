@@ -223,7 +223,7 @@ def run_with(args):
         if len(data1) < 3 or len(data2) < 3:
             continue
 
-        D, pval = ranksums(d1, d2)
+        D, pval = ranksums(data1, data2)
         med1 = np.median(data1)
         med2 = np.median(data2)
         mean1 = np.mean(data1)
