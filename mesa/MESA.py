@@ -30,6 +30,8 @@ class Sample:
             self.type = "SJ"
         elif self.filename.upper().endswith(".BAM"):
             self.type = "bam"
+        elif self.filename.upper().endswith("LEAFCUTTER.JUNC"):
+            self.type = "leafcutter"
         else:
             self.type = "unknown"
             
@@ -201,7 +203,7 @@ class MESA:
                             chromosome = row[0]
                             junctions.add((chromosome,left,right,strand))
                             
-                elif sample.type == "bed":
+                elif sample.type == "bed" or sample.type == "leafcutter":
                     for line in junctionFile:
                         row = line.rstrip().split("\t")
 
@@ -257,7 +259,7 @@ class MESA:
             
             with open(sample.filename,"r") as sampleFile:
                 
-                if sample.type is "bed" or sample.type is "mesabed":
+                if sample.type is "bed" or sample.type is "mesabed" or sample.type is "leafcutter":
                     for line in sampleFile:
                         row = line.rstrip().split("\t")
 
