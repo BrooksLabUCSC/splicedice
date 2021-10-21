@@ -153,13 +153,9 @@ setup(
     # https://packaging.python.org/en/latest/requirements.html
     install_requires=[
             "numpy",
-            "tqdm",
-            "pybedtools",
             "scipy",
             "statsmodels",
             "scikit-learn",
-            "matplotlib",
-            "seaborn",
             "umap-learn",
             ],  # Optional
 

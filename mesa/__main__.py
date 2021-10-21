@@ -3,7 +3,6 @@
 import argparse
 
 from . import MESA as quant
-from . import star_junc_to_bed as sjb
 from . import bam_to_junc_bed as bjb
 from . import pairwise_fisher as pf
 from . import compareSampleSets as css
