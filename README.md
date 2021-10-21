@@ -6,25 +6,23 @@ user discretion is advised.
 ## Table of Contents
   * [Dependencies](#dependencies)
   * [Installation](#installation)
-    + [Development](#development)
   * [Usage](#usage)
-    + [Alignment with star](#alignment-with-star)
+    + [Aligned RNA sequencing reads](#aligned-rna-sequencing-reads)
     + [`mesa bam_to_junc_bed`](#mesa-bam_to_junc_bed)
-    + [`mesa star_junc_to_bed`](#mesa-star_junc_to_bed)
     + [`mesa quant`](#mesa-quant)
-      - [Additional options](#additional-options)
       - [Output files](#output-files)
     + [`mesa compare_sample_sets`](#mesa-compare_sample_sets)
     + [`mesa pairwise`](#mesa-pairwise)
-    + [`mesa cluster`](#mesa-cluster)
   * [Manifest Format](#manifest-format)
   * [Analyzing DRIMSeq output](#analyzing-drimseq-output)
   * [Contributing](#contributing)
   * [License](#license)
 
 ## Dependencies
-- STAR aligner
+- numpy
 - pysam
+- scipy
+- ...
 
 ## Installation
 
@@ -43,48 +41,34 @@ $ pip install --user -e .
 
 ## Usage
 
-### Alignment with star
-MESA uses output files from the [STAR](https://github.com/alexdobin/STAR)
-RNA-seq aligner. An example of using star aligner is shown below.
-```bash
-todo example if needed
-```
+MESA uses counts of splice junctions from aligned RNA sequencing reads, to calculate a Percent-Spliced (PS) value for each junction. It performs best when the junction counts are gathered from a BAM file using `mesa bam_to_junc_bed`, but can accept
 
-### `mesa star_junc_to_bed`
-Converts star aligner tab output files into bed files
-```bash
-$ mesa star_junc_to_bed -s sj.tab
-```
+### Aligned RNA sequencing reads
+MESA requires RNA sequencing reads that are aligned to a reference genome. 
+
+## Manifest files
+
 
 ### `mesa bam_to_junc_bed`
-Converts star aligner tab output files into bed files
+Searches aligned RNA-seq reads (BAM files) for splice junctions, and outputs a bed file with junction counts. Takes 
 ```bash
-$ mesa bam_to_junc_bed -s sj.tab
+$ mesa bam_to_junc_bed -m bam_manifest.txt
 ```
 
 ### `mesa quant`
-Processes junction files (SJ.out.tab from STAR aligner or bed files such as from ) and genome to produce output for later steps.
+Processes junction count files (bed files from `mesa bam_to_junc_bed` or SJ.out.tab from STAR aligner) to calculate Percent-Spliced (PS) value for every splice junction in every sample in the manifest.
 For information on the `bed_manifest.txt` format, see [Manifest Format](#manifest-format).
 ```bash
-$ mesa quant -m bed_manifest.txt -g genome.fa -o my_output
+$ mesa quant -m bed_manifest.txt -o output_prefix
 ```
-
-#### Additional options
-todo example sub arguments
 
 #### Output files
 Based on the `-o/--output_prefix` parameter, `mesa quant` will output a number
 of files for further processing.
-- `{output_prefix}_allPSI.npz`: a numpy output file containing various
-  information from `mesa quant`
-- `{output_prefix}_all_clusters2.tsv`
+- `{output_prefix}_allPS.tsv`: A tab-separated table of PS values, where each column is a sample, and each row is a splice junction.
+- `{output_prefix}_allClusters.tsv`
 - `{output_prefix}_inclusionCounts.tsv`
 - `{output_prefix}_junctions.bed`
-- `order.npz`
-- `{output_prefix}_drimTable.tsv`: If the `--drim-table` option was passed, it
-  will output its data in a format for use with DRIMSeq. See [Analyzing DRIMSeq
-  output](#analyzing-drimseq-output) for how to analyze this data with a
-  provided script.
 
 ### `mesa compare_sample_sets`
 Compares the differences in splicing across two groups. Requires atleast 3
@@ -94,8 +78,8 @@ per condition, use `mesa parwise`.
 $ mesa compare_sample_sets --psiMESA my_output_allPSI.npz -m1 ctrl_manifest.txt -m2 mut_manifest.txt
 ```
 This module will take two manifest files, that represents the two groups you
-wish to compare as well as the allPSI.npz file that was previously outputted by
-`mesa quant`. TODO what is the output
+wish to compare. It also takes the allPS.tsv file that was previously outputted by
+`mesa quant`.
 
 ### `mesa pairwise`
 Example command:
@@ -112,8 +96,6 @@ given junction. This command is recommend for datasets with less than three
 samples per group where `mesa compare_sample_sets` could not be used.
 
 todo example output and explanation
-
-### `mesa cluster`
 
 ## Manifest Format
 The manifest is a tab-delimitted file used by `mesa` provides information about
