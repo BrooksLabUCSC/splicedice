@@ -22,7 +22,6 @@ class BamToJuncBed:
         self.manifest_filename = args.manifest
         self.output_prefix = args.output_prefix
         self.n_threads = args.number_threads
-        self.min_overhang = args.min_overhang
 
         self.bed_directory = os.path.join(os.getcwd(),f"{self.output_prefix}_junction_beds")
         try:
@@ -89,8 +88,6 @@ class BamToJuncBed:
         """
         min_length = self.args.min_length
         max_length = self.args.max_length
-        min_overhang = self.args.min_overhang
-        min_entropy = self.args.min_entropy
         min_reads = self.args.min_reads
         fasta = self.args.genome
         
@@ -184,6 +181,45 @@ class BamToJuncBed:
 
             filteredJunctions.append(junction)
 
+            
+        #
+        if self.args.strands in ("inferCombine", "inferOnly"):
+            
+            opposite = {"+":"-", "-":"+"}
+            plus_motifs = {"GT_AG","GC_AG","AT_AC"}
+            minus_motifs = {"CT_AC","CT_GC","GT_AT"}
+            
+            firstFiltered = filteredJunctions
+            filteredJunctions = []
+            
+            motif = f"{leftMotif[left]}_{rightMotif[right]}"
+            
+            for junction in firstFiltered:
+                
+                chromosome,left,right,strand = junction
+                complement = (chromosome,left,right,opposite[strand])
+                
+                if complement not in counts:
+                    filteredJunctions.append(junction)
+                elif (junction in self.annotated or
+                     (strand == "+" and motif in plus_motifs) or
+                     (strand == "-" and motif in minus_motifs)):
+
+                    filteredJunctions.append(junction)
+                    
+                    if self.args.strands == "inferCombine":
+                        counts[junction] += counts[complement]
+                        
+                elif (complement in self.annotated or
+                     (strand == "-" and motif in plus_motifs) or
+                     (strand == "+" and motif in minus_motifs)):
+                    pass
+                else:
+                    filteredJunctions.append(junction)
+                        
+
+
+        
         with open(bedfilename,"w") as bedOut:
             for junction in filteredJunctions:
                 chromosome,left,right,strand = junction
@@ -231,16 +267,23 @@ def add_parser(parser):
                        help="Minimum distance between ends of junction [Default 50]")
     parser.add_argument("--min_reads",type=int,default=5,
                        help="Minimum number of reads required to report junction [Default 5]")
-    parser.add_argument("--min_overhang",type=int,default=5,
-                       help="Minimum read overhang before or after junction [Default 5]")
+    
+    #parser.add_argument("--min_overhang",type=int,default=5,
+    #                   help="Minimum read overhang before or after junction [Default 5]")
+    
     parser.add_argument("--no_multimap",action="store_true",
                        help="STILL IN PROGRESS")
     parser.add_argument("--filter",choices=["gtag_only","all"],default="gtag_only",
                        help="STILL IN PROGRESS" )
     parser.add_argument("--number_threads","-n",type=int,default=1,
                        help="Number of bam files to search concurrently [Default 1]")
-    parser.add_argument("--min_entropy",default=1,type=float,
-                       help="Minimum Shannon entropy required to report junction [Default 1]")
+    
+    #parser.add_argument("--min_entropy",default=1,type=float,
+    #                   help="Minimum Shannon entropy required to report junction")
+    
+    parser.add_argument("--strands","-s",default="keepBoth",
+                        choices=["keepBoth","inferOnly","inferCombine"],
+                        help="How to handle junctions with same coordinates on opposite strands. [Default 'keepBoth'. Options 'inferOnly','inferCombine']")
 
     
 def run_with(args):
