@@ -36,7 +36,6 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers()
 
-    add_cmd("star_junc_to_bed", sjb.add_parser, sjb.run_with, subparsers)
     add_cmd("bam_to_junc_bed", bjb.add_parser, bjb.run_with, subparsers)
     add_cmd("quant", quant.add_parser, quant.run_with, subparsers)
     add_cmd("intron_coverage", ic.add_parser, ic.run_with, subparsers)
