@@ -116,7 +116,7 @@ def run_with(args):
     coverageDirectory = args.coverageDirectory
     outputPrefix = args.outputPrefix
 
-    samples = [s.rstrip("intron_coverage.txt") for s in os.listdir(coverageDirectory) if s.endswith("intron_coverage.txt")]
+    samples = [s.replace("_intron_coverage.txt","") for s in os.listdir(coverageDirectory) if s.endswith("intron_coverage.txt")]
     print("Gathering inclusion counts and clusters...")
     counts = getInclusionCounts(countFile)
     if not args.singleJunctionCalculation:
