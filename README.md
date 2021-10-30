@@ -13,6 +13,8 @@ user discretion is advised.
       - [Output files](#output-files)
     + [`mesa compare_sample_sets`](#mesa-compare_sample_sets)
     + [`mesa pairwise`](#mesa-pairwise)
+    + [Intron Retention](#intron-retention)
+
   * [Manifest Format](#manifest-format)
   * [Analyzing DRIMSeq output](#analyzing-drimseq-output)
   * [Contributing](#contributing)
@@ -96,6 +98,15 @@ given junction. This command is recommend for datasets with less than three
 samples per group where `mesa compare_sample_sets` could not be used.
 
 todo example output and explanation
+
+### Intron Retention
+The percent-spliced value does not quantify intron retention, so separate subprograms gives a table of IR values, in the same format as the PS table. The first subprogram, `mesa intron_coverage`, measures the coverage across previously identified splice junctions, and outputs a table for each sample. The second subprogram, `mesa ir_table`, takes those coverage values and calculates the IR value for each junction in each sample, outputting the final IR table.
+
+```bash
+$ mesa intron_coverage -b bam_manifest.tsv -m project_allPS.tsv -j project_junctions.bed -n 4 -o coverage_output_dir
+$ mesa ir_table -i project_inclusionCounts.tsv -c project_allClusters.tsv -d coverage_output_dir -o project_output_prefix
+```
+
 
 ## Manifest Format
 The manifest is a tab-delimitted file used by `mesa` provides information about
