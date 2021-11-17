@@ -96,17 +96,19 @@ class BamToJuncBed:
         
         #genome = pysam.AlignmentFile(filename)
         #############
+        save = pysam.set_verbosity(0)
         try:
             genome = pysam.AlignmentFile(filename)
         except ValueError:
             print("Using: pysam.AlignmentFile(filename,check_sq=False) with",filename)
             genome = pysam.AlignmentFile(filename,check_sq=False)
+        pysam.set_verbosity(save)
         ##############
         counts = {}
         leftDiversity = {}
         rightDiversity = {}
         overhangs = {}
-        for read in genome.fetch():
+        for read in genome.fetch(until_eof=True):
             if True: #read.is_read2:
                 if read.is_reverse:
                     strand = "-"
