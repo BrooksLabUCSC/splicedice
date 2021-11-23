@@ -12,7 +12,7 @@ from . import intron_coverage as ic
 from . import ir_table as it
 from . import subset as subset
 from . import similarity as similarity
-
+from . import select as select
 
 def add_cmd(name, arg_parser_fn, run_with, subparser):
     """Adds a subparser command to the parser.  name is a string that denotes
@@ -47,6 +47,8 @@ def main():
     add_cmd("findOutliers", fo.add_parser, fo.run_with, subparsers)
     add_cmd("subset", subset.add_parser, subset.run_with, subparsers)
     add_cmd("similarity", similarity.add_parser, similarity.run_with, subparsers)
+    add_cmd("select", select.add_parser, select.run_with, subparsers)
+
 
 
     args = parser.parse_args()
