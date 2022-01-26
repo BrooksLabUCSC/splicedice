@@ -10,9 +10,13 @@ def readVsFile(vs_filename):
         deltas = {}
         for line in vs_file:
             row = line.rstrip().split("\t")
+            if float(row[6]) > 0.05:
+                continue
             event = row[0]
             median1 = float(row[3])
             delta = float(row[5])
+            if delta == 0:
+                continue
             midpoints[event] = median1-(delta/2)
             deltas[event] = delta
     return midpoints,deltas
@@ -26,14 +30,15 @@ def scoreSamples(allps_filename,midpoints,deltas):
         for line in allps_file:
             row = line.rstrip().split("\t")
             event = row[0]
-            if event not in deltas or deltas[event] == 0:
+            if event not in deltas:
                 continue
-            count += 1
             if deltas[event] < 0:
+                count += 1
                 for i,ps in enumerate(row[1:]):
                     if float(ps) < midpoints[event]:
                         scores[i] += 1
             elif deltas[event] > 0:
+                count += 1
                 for i,ps in enumerate(row[1:]):
                     if float(ps) > midpoints[event]:
                         scores[i] += 1
@@ -49,11 +54,11 @@ def getGroups(manifest_filename):
 
 def writeScores(output_filename,scores,samples,count,groups=None):
     with open(output_filename,"w") as score_file:
-        for score,sample in sorted(zip(scores,samples)):
-            if groups:
+        for score,sample in sorted(zip(scores,samples),reverse=True):
+            if groups and sample in groups:
                 group1,group2 = groups[sample]
                 score_file.write(f"{sample}\t{group1}\t{group2}\t{score/count:0.03f}\n")
-            else:
+            elif not groups:
                 score_file.write(f"{sample}\t{score/count:0.03f}\n")
         
 

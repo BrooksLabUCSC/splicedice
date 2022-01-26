@@ -96,13 +96,13 @@ class BamToJuncBed:
         
         #genome = pysam.AlignmentFile(filename)
         #############
-        save = pysam.set_verbosity(0)
+        old_verbosity = pysam.set_verbosity(0)
         try:
             genome = pysam.AlignmentFile(filename)
         except ValueError:
             print("Using: pysam.AlignmentFile(filename,check_sq=False) with",filename)
             genome = pysam.AlignmentFile(filename,check_sq=False)
-        pysam.set_verbosity(save)
+        pysam.set_verbosity(old_verbosity)
         ##############
         counts = {}
         leftDiversity = {}
@@ -255,9 +255,9 @@ class BamToJuncBed:
 
 def add_parser(parser):
     """ """
-    parser.add_argument("--manifest","-m",
+    parser.add_argument("--manifest","-m",required=True,
                        help="Tab-separated file of samples and bam file paths.")
-    parser.add_argument("--output_prefix","-o",
+    parser.add_argument("--output_prefix","-o",required=True,
                        help="Prefix for junction file directory and manifest.")
     parser.add_argument("--genome","-g",
                         help="Optional. Genome fasta file to report splice site motifs")
@@ -270,18 +270,11 @@ def add_parser(parser):
     parser.add_argument("--min_reads",type=int,default=5,
                        help="Minimum number of reads required to report junction [Default 5]")
     
-    #parser.add_argument("--min_overhang",type=int,default=5,
-    #                   help="Minimum read overhang before or after junction [Default 5]")
-    
-    parser.add_argument("--no_multimap",action="store_true",
-                       help="STILL IN PROGRESS")
-    parser.add_argument("--filter",choices=["gtag_only","all"],default="gtag_only",
-                       help="STILL IN PROGRESS" )
+#    parser.add_argument("--no_multimap",action="store_true",
+#                       help="STILL IN PROGRESS")
+
     parser.add_argument("--number_threads","-n",type=int,default=1,
                        help="Number of bam files to search concurrently [Default 1]")
-    
-    #parser.add_argument("--min_entropy",default=1,type=float,
-    #                   help="Minimum Shannon entropy required to report junction")
     
     parser.add_argument("--strands","-s",default="keepBoth",
                         choices=["keepBoth","inferOnly","inferCombine"],
