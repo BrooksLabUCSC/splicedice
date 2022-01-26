@@ -12,7 +12,8 @@ from . import intron_coverage as ic
 from . import ir_table as it
 from . import subset as subset
 from . import similarity as similarity
-from . import select as select
+from . import select_samples as select
+from . import counts_to_ps as ctp
 
 def add_cmd(name, arg_parser_fn, run_with, subparser):
     """Adds a subparser command to the parser.  name is a string that denotes
@@ -48,6 +49,9 @@ def main():
     add_cmd("subset", subset.add_parser, subset.run_with, subparsers)
     add_cmd("similarity", similarity.add_parser, similarity.run_with, subparsers)
     add_cmd("select", select.add_parser, select.run_with, subparsers)
+    add_cmd("counts_to_ps", ctp.add_parser, ctp.run_with, subparsers)
+
+
 
 
 
