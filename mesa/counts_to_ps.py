@@ -20,7 +20,7 @@ def get_counts(count_file):
         for line in cf:
             row = line.rstrip().split('\t')
             junction = row[0]
-            counts[junction] = np.array(row[1:],dtype=int)
+            counts[junction] = np.array(row[1:],dtype=float)
     return header,counts
 
 def write_PS_values(clusters,header,counts,output_file):
