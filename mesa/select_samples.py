@@ -2,74 +2,98 @@
 MESA select
 """
 
-def getJunctions(filename1,filename2):
-    with open(filename1) as file1:
-        with open(filename2) as file2:
+def parseManifest(manifest_filename):
+    with open(manifest_filename) as manifest:
+        filenames = []
+        for line in manifest:
+            filenames.append(line.rstrip())
+    return filenames
+            
+def getJunctions(filenames):
+    """ """
+    all_junctions = {}
+    for filename in filenames:
+        with open(filename) as file:
+            junctions = set()
+            file.readline()
+            for line in file:
+                junctions.add(line.split("\t")[0])
+        all_junctions[filename] = junctions
+    return all_junctions
+    
 
-            header1 = file1.readline().rstrip().split("\t")
-            header2 = file2.readline().rstrip().split("\t")
 
+def decideJunctions(all_junctions,which):
+    if which == "union":
+        return sorted(set.union(*all_junctions.values()))
+    if which == "intersection":
+        return sorted(set.intersection(*all_junctions.values()))
+    
 
-            junctions1 = set()
-            for line in file1:
-                row = line.split("\t")
-                junctions1.add(row[0])
-
-            junctions2 = set()
-            for line in file2:
-                row = line.split("\t")
-                junctions2.add(row[0])
-    return junctions1,junctions2
-
-def writeOutput(filename1,filename2,junctions,outfilename):
+def writeOutput(filenames,junctions,outfilename):
+    
+    header = {}
+    table_rows = {j:{} for j in junctions}
+    for filename in filenames:
+        with open(filename) as file:
+            header[filename] = file.readline().rstrip().split("\t")[1:]
+            for line in file:
+                row = line.rstrip().split("\t")
+                if row[0] in junctions:
+                    table_rows[row[0]][filename] = row[1:]
+                        
     with open(outfilename,"w") as output:
-        with open(filename1) as file1:
-            with open(filename2) as file2:
-
-                header1 = file1.readline().rstrip().split("\t")
-                header2 = file2.readline().rstrip().split("\t")
-
-                print(f"Writing table with {len(header1)+len(header2)-2} samples and {len(junctions)} junctions")
-                header = "\t".join(header1+header2[1:])
-                output.write(f"{header}\n")
-
-                to_write = {}
-                for line in file1:
-                    row = line.rstrip().split("\t")
-                    if row[0] in junctions:
-                        to_write[row[0]] = row[1:]
-
-                for line in file2:
-                    row = line.rstrip().split("\t")
-                    if row[0] in junctions:
-                        new_line = "\t".join(row[0:1] + to_write[row[0]] + row[1:])
-                        output.write(f"{new_line}\n")
+        output.write("cluster\t")
+        
+        output.write("\t".join(["\t".join(header[f]) for f in filenames]) + "\n")
+        
+        for junction in junctions:
+            table_row = table_rows[junction]
+            out_row = [junction]
+            for filename in filenames:
+                if filename in table_row:
+                    out_row.extend(table_row[filename])
+                else:
+                    out_row.extend(["nan"]*len(header[filename]))
+            output.write("\t".join(out_row)+"\n")
+        
 
 
 
 def add_parser(parser):
     """ """
     parser.add_argument("--allps1","-a1",
-                        action="store",required=True,
+                        action="store",
                        help="First allPS file output from mesa quant")
     parser.add_argument("--allps2","-a2",
-                        action="store",required=True,
+                        action="store",
                        help="Second allPS file output from mesa quant")
+    parser.add_argument("--manifest","-m",
+                        action="store",
+                        help="File with list of allPS file paths (supercedes allPS1 and allPS2)")
     parser.add_argument("--output","-o",
                         action="store",required=True,
                        help="Output filename")
-    parser.add_argument("--junctions","-j",
-                        choices=["intersection","union","first","second"],
+    parser.add_argument("--join","-j",
+                        choices=["intersection","union"],
                         default="intersection",
                         help="Which junctions to select from each allPS table (Default AND CURRENTLY ONLY OPTION: intersection)")
     
 def run_with(args):
     """ """
-    junctions1,junctions2 = getJunctions(args.allps1,args.allps2)
+    if args.manifest:
+        filenames = parseManifest(args.manifest)
+    elif args.allps1 and args.allps2:
+        filenames = [args.allps1,args.allps2]
+    else:
+        import sys
+        sys.exit("Requires --manifest file or --allPS1 and --allPS2 files.")
+                 
+    all_junctions = getJunctions(filenames)
     
-    junctions = junctions1.intersection(junctions2)
+    junctions = decideJunctions(all_junctions,args.join)
     
-    writeOutput(args.allps1,args.allps2,junctions,args.output)
+    writeOutput(filenames,junctions,args.output)
 
     
     
