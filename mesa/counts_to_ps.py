@@ -13,6 +13,32 @@ def get_clusters(cluster_file):
             clusters[junction] = overlaps.split(',')
     return clusters
             
+def determine_clusters(counts_file):
+    with open(counts_file) as cfile:
+        junctions = []
+        cfile.readline()
+        for line in cfile:
+            chromosome,coords,strand = line.split('\t',1)[0].split(":")
+            start,stop = [int(x) for x in coords.split("-")]
+            junctions.append((chromosome,start,stop,strand))
+        clusters = {}
+        for junction in sorted(junctions, key = lambda x: (x[0],x[3],x[1],x[2])):
+            if junction[0] != chromosome or junction[3] != strand:
+                chromosome = junction[0]
+                strand = junction[3]
+                potentialOverlaps = []
+            j_string = f"{junction[0]}:{junction[1]}-{junction[2]}:{junction[3]}"
+            clusters[j_string] = []
+            newPotentialOverlaps = [junction]
+            for priorJunction in potentialOverlaps:
+                if priorJunction[2] >= junction[1]: 
+                    pj_string = f"{priorJunction[0]}:{priorJunction[1]}-{priorJunction[2]}:{priorJunction[3]}"
+                    clusters[pj_string].append(j_string)
+                    clusters[j_string].append(pj_string)  
+                    newPotentialOverlaps.append(priorJunction)
+            potentialOverlaps = newPotentialOverlaps
+    return clusters
+    
 def get_counts(count_file):
     with open(count_file) as cf:
         header = cf.readline()
@@ -23,12 +49,18 @@ def get_counts(count_file):
             counts[junction] = np.array(row[1:],dtype=float)
     return header,counts
 
+def junctionStringToTuple(string):
+    chromosome,coords,strand = string.split(":")
+    start,end = [int(x) for x in coords.split('-')]
+    return (chromosome,start,end,strand)
+
 def write_PS_values(clusters,header,counts,output_file):
     with open(output_file,"w") as psfile:
         psfile.write(header)
-        for junction,overlaps in clusters.items():
+        j_list = sorted(clusters.keys(),key = junctionStringToTuple)
+        for junction in j_list:
             exclusion = counts[junction].copy()
-            for overlap in overlaps:
+            for overlap in clusters[junction]:
                 if overlap == '':
                     continue
                 exclusion += counts[overlap]
@@ -39,8 +71,11 @@ def write_PS_values(clusters,header,counts,output_file):
 def add_parser(parser):
     """ """
     parser.add_argument("--clusters","-c",
-                        action="store",required=True,
+                        action="store",default=None,
                        help="allClusters.tsv file from MESA")
+    parser.add_argument("--recluster","-r",
+                        action="store_true",
+                        help="Determine clusters from splice junctions in counts file")
     parser.add_argument("--inclusion_counts","-i",
                         action="store",required=True,
                        help="inclusionCounts.tsv file from MESA")
@@ -50,12 +85,20 @@ def add_parser(parser):
     
 def run_with(args):
     """ Main program to calculate PS values"""
-    print("Gathering clusters...")
-    clusters = get_clusters(args.clusters)
+    
+    
+    if args.clusters:
+        print("Gathering clusters...")
+        clusters = get_clusters(args.clusters)
+    elif args.recluster:
+        print("Determining clusters from counts file...")
+        clusters = determine_clusters(args.inclusion_counts)
+        
     print("Gathering counts...")
     header,counts = get_counts(args.inclusion_counts)
     print("Calculating PS values...")
     write_PS_values(clusters,header,counts,args.output)
+    print("Done.")
     
 
 
