@@ -23,7 +23,7 @@
 import numpy as np
 
 
-def getClusters(filename):
+def getClusters(filename, filter_list=None):
     clusters = {}
     with open(filename) as allClusters:
         for line in allClusters:
@@ -35,17 +35,27 @@ def getClusters(filename):
                 mxes = []
             
             clusters[event] = mxes
+            if filter_list is not None:
+                if event in filter_list:
+                    clusters[event] = mxes
+            else:
+                clusters[event] = mxes
     return clusters
 
-def getEventCounts(filename):
+def getEventCounts(filename, filter_list=None):
     events = []
     counts = []
     with open(filename) as tsv:
-        samples = tsv.readline().rstrip().split("\t")[:-1]
+        samples = tsv.readline().rstrip().split("\t")[1:]
         for line in tsv:
             row = line.rstrip().split("\t")
-            events.append(row[-1])
-            counts.append(row[:-1])
+            if filter_list is not None:
+                if row[0] in filter_list:
+                    events.append(row[0])
+                    counts.append(row[1:])
+            else:
+                    events.append(row[0])
+                    counts.append(row[1:])
     counts = np.array(counts,dtype=float)
     return samples,events,counts
 
@@ -76,6 +86,8 @@ def add_parser(parser):
                                     "all: all p-values for every sample pair together;\n"
                                     "none: no multiple test correction]")
     
+    parser.add_argument("-f", "--filter_list", help="txt file where each line is a event to analyze, can speed up fisher test analysis")
+    
     parser.add_argument("-o", "--output",
         default="pairwise.tsv",
         help="tab-separated output filename (default uses input prefix)")
@@ -95,15 +107,20 @@ def run_with(args):
     allClusters = args.clusters
     outfilename = args.output
     
+    if args.filter_list is not None:
+        with open(args.filter_list, 'r') as filter_list_file:
+            filter_list = set([line.rstrip() for line in filter_list_file])
+    else:
+        filter_list = None
     
     if args.chi2:
         test_method = chi2_contingency
     else:
         test_method = fisher_exact
 
-    samples,events,counts = getEventCounts(inclusionCounts)
+    samples,events,counts = getEventCounts(inclusionCounts, filter_list)
     print("Counts loaded from",inclusionCounts,"...")
-    clusters = getClusters(allClusters)
+    clusters = getClusters(allClusters, filter_list)
     print("Clusters loaded from",allClusters,"...")
     pairs = []
     for i in range(len(samples)-1):
