@@ -22,6 +22,7 @@ def determine_clusters(counts_file):
             start,stop = [int(x) for x in coords.split("-")]
             junctions.append((chromosome,start,stop,strand))
         clusters = {}
+        chromosome,junction = None,None
         for junction in sorted(junctions, key = lambda x: (x[0],x[3],x[1],x[2])):
             if junction[0] != chromosome or junction[3] != strand:
                 chromosome = junction[0]
@@ -54,8 +55,8 @@ def junctionStringToTuple(string):
     start,end = [int(x) for x in coords.split('-')]
     return (chromosome,start,end,strand)
 
-def write_PS_values(clusters,header,counts,output_file):
-    with open(output_file,"w") as psfile:
+def writePsValues(clusters,header,counts,output_prefix):
+    with open(f"{output_prefix}_allPS.tsv","w") as psfile:
         psfile.write(header)
         j_list = sorted(clusters.keys(),key = junctionStringToTuple)
         for junction in j_list:
@@ -68,6 +69,15 @@ def write_PS_values(clusters,header,counts,output_file):
             ps = '\t'.join([f"{x:0.3f}" for x in ps])
             psfile.write(f"{junction}\t{ps}\n")
 
+            
+def writeClusters(clusters,output_prefix):
+    """ """
+    with open(f"{output_prefix}_allClusters.tsv","w") as clusterFile:
+        for junction in sorted(clusters):
+            clusterFile.write(f"{junction}\t{','.join(clusters[junction])}\n")
+            
+              
+            
 def add_parser(parser):
     """ """
     parser.add_argument("--clusters","-c",
@@ -79,9 +89,9 @@ def add_parser(parser):
     parser.add_argument("--inclusion_counts","-i",
                         action="store",required=True,
                        help="inclusionCounts.tsv file from MESA")
-    parser.add_argument("--output","-o",
+    parser.add_argument("--output_prefix","-o",
                         action="store",required=True,
-                       help="output filename") 
+                       help="output filename path and prefix") 
     
 def run_with(args):
     """ Main program to calculate PS values"""
@@ -93,11 +103,13 @@ def run_with(args):
     elif args.recluster:
         print("Determining clusters from counts file...")
         clusters = determine_clusters(args.inclusion_counts)
+        writeClusters(clusters,args.output_prefix)
+              
         
     print("Gathering counts...")
     header,counts = get_counts(args.inclusion_counts)
     print("Calculating PS values...")
-    write_PS_values(clusters,header,counts,args.output)
+    writePsValues(clusters,header,counts,args.output_prefix)
     print("Done.")
     
 
