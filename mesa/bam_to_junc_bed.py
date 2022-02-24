@@ -193,12 +193,13 @@ class BamToJuncBed:
             
             firstFiltered = filteredJunctions
             filteredJunctions = []
-            
-            motif = f"{leftMotif[left]}_{rightMotif[right]}"
-            
+                        
             for junction in firstFiltered:
                 
                 chromosome,left,right,strand = junction
+                motif = f"{leftMotif[left]}_{rightMotif[right]}"
+
+
                 complement = (chromosome,left,right,opposite[strand])
                 
                 if complement not in counts:
