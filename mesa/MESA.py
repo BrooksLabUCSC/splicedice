@@ -185,19 +185,23 @@ class MESA:
                         row = line.rstrip().split("\t")
 
                         score = int(row[4])
-                        if score < self.args.minUnique:
-                            continue
-                             
+                        
+                        info = [x.split(':') for x in row[3].split(';')]
                         left = int(row[1])
                         right = int(row[2])
                         length = right-left
-                        if length > self.args.maxLength or length < self.args.minLength:    
-                            continue
-                        info = [x.split(':') for x in row[3].split(';')]
-                        if int(info[1][1]) < self.args.minOverhang:
-                            continue
-                        if float(info[0][1]) < self.args.minEntropy or float(info[0][2]) < self.args.minEntropy:
-                            continue
+                        
+                        if info[3][1] == "?":
+                            
+                            if score < self.args.minUnique:
+                                continue
+                            if length > self.args.maxLength or length < self.args.minLength:    
+                                continue
+                            if int(info[1][1]) < self.args.minOverhang:
+                                continue
+                            if float(info[0][1]) < self.args.minEntropy or float(info[0][2]) < self.args.minEntropy:
+                                continue
+                                
                         strand = row[5]
                         if strand in plusminus:
                             chromosome = row[0]
@@ -259,7 +263,7 @@ class MESA:
             
             with open(sample.filename,"r") as sampleFile:
                 
-                if sample.type is "bed" or sample.type is "mesabed" or sample.type is "leafcutter":
+                if sample.type == "bed" or sample.type == "mesabed" or sample.type == "leafcutter":
                     for line in sampleFile:
                         row = line.rstrip().split("\t")
 
@@ -271,7 +275,7 @@ class MESA:
                             if self.args.lowCoverageNan and score < self.args.minUnique:
                                 low.append((self.junctionIndex[junction],sampleIndex))
                     
-                elif sample.type is "SJ":
+                elif sample.type == "SJ":
                                         
                     strandSymbol = {'0':'0', '1':'+', '2':'-'}
                     
