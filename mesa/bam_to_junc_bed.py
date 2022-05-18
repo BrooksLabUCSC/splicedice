@@ -69,7 +69,10 @@ class BamToJuncBed:
                 if row[2] == "transcript":
                     info = [x.split('"') for x in row[8].split(';')]
                     tid =  [x[1] for x in info if 'transcript_id' in x[0]][0]
-                    gid = [x[1] for x in info if 'gene_name' in x[0]][0]
+                    try:
+                        gid = [x[1] for x in info if 'gene_name' in x[0]][0]
+                    except IndexError:
+                        gid = [x[1] for x in info if 'gene_id' in x[0]][0]
                     genes[tid] = gid
                     transcripts[(tid,row[0],row[6])] = []
                 if row[2] == "exon":
@@ -160,16 +163,16 @@ class BamToJuncBed:
             chromosome,left,right,strand = junction
             
             if genome:
-                if left not in leftMotif:
+                if (chromosome,left) not in leftMotif:
                     try:
-                        leftMotif[left] = genome.fetch(chromosome,left,left+2)
+                        leftMotif[(chromosome,left)] = genome.fetch(chromosome,left,left+2)
                     except KeyError:
-                        leftMotif[left] = "NN"
-                if right not in rightMotif:
+                        leftMotif[(chromosome,left)] = "NN"
+                if (chromosome,right) not in rightMotif:
                     try:
-                        rightMotif[right] = genome.fetch(chromosome,right-2,right)
+                        rightMotif[(chromosome,right)] = genome.fetch(chromosome,right-2,right)
                     except KeyError:
-                        rightMotif[right] = "NN"
+                        rightMotif[(chromosome,right)] = "NN"
             leftEntropy[junction] = 0
             total = sum(leftDiversity[junction].values())
             for species,count in leftDiversity[junction].items():
@@ -197,7 +200,7 @@ class BamToJuncBed:
             for junction in firstFiltered:
                 
                 chromosome,left,right,strand = junction
-                motif = f"{leftMotif[left]}_{rightMotif[right]}"
+                motif = f"{leftMotif[(chromosome,left)]}_{rightMotif[(chromosome,right)]}"
 
 
                 complement = (chromosome,left,right,opposite[strand])

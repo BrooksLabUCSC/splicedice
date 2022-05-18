@@ -38,7 +38,7 @@ def add_parser(parser):
                         help='directory for outputting intron coverage count files')
 
 class IntronCoverage():
-    def __init__(self, manifest,mesa,junctionFile,binSize,numThreads):
+    def __init__(self, manifest,mesa,junctionFile,binSize,numThreads,outputDir):
         """
         Instantiate object attributes
         """
@@ -47,6 +47,7 @@ class IntronCoverage():
         self.junctionFilename = junctionFile
         self.binSize = binSize
         self.numThreads = numThreads
+        self.outputDir = outputDir
 
         self.start = time.time()
 
@@ -218,7 +219,7 @@ class IntronCoverage():
         junctions.sort(key = lambda j: j[1])
         
         # Writing junctions and percentiles to bed-like text file
-        with open(f"{sample}_intron_coverage.txt","w") as outfile:
+        with open(f"{self.outputDir}/{sample}_intron_coverage.txt","w") as outfile:
             
             for i,junction in junctions:
                 chromosome,left,right,strand = junction
@@ -252,8 +253,12 @@ def run_with(args):
     junctionFile = args.junctionFile
     binSize = args.binSize
     numThreads = args.numThreads
+    outputDir = args.outputDir
+    
+    if not os.path.isdir(outputDir):
+        os.mkdir(outputDir)
 
-    intronCoverage = IntronCoverage(manifest,mesa,junctionFile,binSize,numThreads)
+    intronCoverage = IntronCoverage(manifest,mesa,junctionFile,binSize,numThreads,outputDir)
     intronCoverage.parseManifest()
     intronCoverage.getIntronPercentiles()
     intronCoverage.getCoveragePool()
