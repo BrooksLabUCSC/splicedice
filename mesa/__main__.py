@@ -6,7 +6,6 @@ from . import MESA as quant
 from . import bam_to_junc_bed as bjb
 from . import pairwise_fisher as pf
 from . import compareSampleSets as css
-from . import clusterMESA as cm
 from . import findOutliers as fo
 from . import intron_coverage as ic
 from . import ir_table as it
@@ -42,7 +41,6 @@ def main():
     add_cmd("quant", quant.add_parser, quant.run_with, subparsers)
     add_cmd("intron_coverage", ic.add_parser, ic.run_with, subparsers)
     add_cmd("ir_table", it.add_parser, it.run_with, subparsers)
-    add_cmd("cluster", cm.add_parser, cm.run_with, subparsers)
     add_cmd("compare_sample_sets", css.add_parser, css.run_with, subparsers)
     add_cmd("pairwise", pf.add_parser, pf.run_with, subparsers)
     add_cmd("findOutliers", fo.add_parser, fo.run_with, subparsers)
