@@ -21,7 +21,9 @@ user discretion is advised.
   * [License](#license)
 
 ## Dependencies
+- python=3.7+
 - numpy
+- samtools
 - pysam
 - scipy
 - ...
@@ -52,7 +54,7 @@ MESA requires RNA sequencing reads that are aligned to a reference genome.
 
 
 ### `mesa bam_to_junc_bed`
-Searches aligned RNA-seq reads (BAM files) for splice junctions, and outputs a bed file with junction counts. Takes 
+Searches aligned RNA-seq reads (BAM files) for splice junctions, and outputs a bed file with junction counts. Takes a manifest with file paths, and outputs a .junc.bed file for each BAM.
 ```bash
 $ mesa bam_to_junc_bed -m bam_manifest.txt
 ```
