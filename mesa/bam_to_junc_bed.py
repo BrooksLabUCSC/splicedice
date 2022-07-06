@@ -229,7 +229,7 @@ class BamToJuncBed:
         with open(bedfilename,"w") as bedOut:
             for junction in filteredJunctions:
                 chromosome,left,right,strand = junction
-                name = f"e:{leftEntropy[junction]:0.02f}:{rightEntropy[junction]:0.02f};o:{overhangs[junction]};m:{leftMotif[left]}_{rightMotif[right]};a:{self.annotated.get(junction,'?')}"
+                name = f"e:{leftEntropy[junction]:0.02f}:{rightEntropy[junction]:0.02f};o:{overhangs[junction]};m:{leftMotif[(chromosome,left)]}_{rightMotif[(chromosome,right)]};a:{self.annotated.get(junction,'?')}"
                 bedOut.write(f"{chromosome}\t{left}\t{right}\t{name}\t{counts[junction]}\t{strand}\n")
 
         return filename, bedfilename, len(filteredJunctions)
@@ -280,9 +280,9 @@ def add_parser(parser):
     parser.add_argument("--number_threads","-n",type=int,default=1,
                        help="Number of bam files to search concurrently [Default 1]")
     
-    parser.add_argument("--strands","-s",default="keepBoth",
+    parser.add_argument("--strands","-s",default="inferCombine",
                         choices=["keepBoth","inferOnly","inferCombine"],
-                        help="How to handle junctions with same coordinates on opposite strands. [Default 'keepBoth'. Options 'inferOnly','inferCombine']")
+                        help="How to handle junctions with same coordinates on opposite strands. [Default 'inferCombine'. Options 'keepBoth','inferOnly']")
 
     
 def run_with(args):
