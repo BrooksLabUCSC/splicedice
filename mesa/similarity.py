@@ -26,23 +26,25 @@ def scoreSamples(allps_filename,midpoints,deltas):
     with open(allps_filename) as allps_file:
         samples = allps_file.readline().rstrip().split("\t")[1:]
         scores = [0 for sample in samples]
-        count = 0
+        counts = [0 for sample in samples]
         for line in allps_file:
             row = line.rstrip().split("\t")
             event = row[0]
             if event not in deltas:
                 continue
             if deltas[event] < 0:
-                count += 1
                 for i,ps in enumerate(row[1:]):
-                    if float(ps) < midpoints[event]:
-                        scores[i] += 1
+                    if ps != "nan":
+                        counts[i] += 1
+                        if float(ps) < midpoints[event]:
+                            scores[i] += 1
             elif deltas[event] > 0:
-                count += 1
                 for i,ps in enumerate(row[1:]):
-                    if float(ps) > midpoints[event]:
-                        scores[i] += 1
-    return samples,scores,count
+                    if ps != "nan":
+                        counts[i] += 1
+                        if float(ps) > midpoints[event]:
+                            scores[i] += 1
+    return samples,scores,counts
         
 def getGroups(manifest_filename):
     groups = {}
@@ -52,14 +54,14 @@ def getGroups(manifest_filename):
             groups[name] = (group1,group2)
     return groups
 
-def writeScores(output_filename,scores,samples,count,groups=None):
+def writeScores(output_filename,scores,samples,counts,groups=None):
     with open(output_filename,"w") as score_file:
-        for score,sample in sorted(zip(scores,samples),reverse=True):
+        for score,sample,count in sorted(zip(scores,samples,counts),reverse=True):
             if groups and sample in groups:
                 group1,group2 = groups[sample]
-                score_file.write(f"{sample}\t{group1}\t{group2}\t{score/count:0.03f}\n")
+                score_file.write(f"{sample}\t{group1}\t{group2}\t{score/count:0.03f}\t{score}\t{count}\n")
             elif not groups:
-                score_file.write(f"{sample}\t{score/count:0.03f}\n")
+                score_file.write(f"{sample}\t{score/count:0.03f}\t{score}\t{count}\n")
         
 
 
@@ -86,13 +88,13 @@ def run_with(args):
     output_filename = args.output
         
     midpoints,deltas = readVsFile(vs_filename)
-    samples,scores,count = scoreSamples(allps_filename,midpoints,deltas)
+    samples,scores,counts = scoreSamples(allps_filename,midpoints,deltas)
     
     if manifest_filename:
         groups = getGroups(manifest_filename)
-        writeScores(output_filename,scores,samples,count,groups)
+        writeScores(output_filename,scores,samples,counts,groups)
     else:
-        writeScores(output_filename,scores,samples,count)
+        writeScores(output_filename,scores,samples,counts)
 
 
 if __name__ == "__main__":
