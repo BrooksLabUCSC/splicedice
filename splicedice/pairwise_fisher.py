@@ -70,10 +70,10 @@ def getEventCounts(filename, filter_list=None):
 
 def add_parser(parser):
     parser.add_argument(
-        "--inclusionMESA",
+        "--inclusionSPLICEDICE",
         type=str,
         required=True,
-        help="Compressed NPZ formatted Inclusion count matrix from quantMESA.",
+        help="Compressed NPZ formatted Inclusion count matrix from quantSPLICEDICE.",
     )
 
     parser.add_argument(
@@ -120,7 +120,7 @@ def run_with(args):
     from statsmodels.stats.multitest import multipletests
 
     # Input file arguments
-    inclusionCounts = args.inclusionMESA
+    inclusionCounts = args.inclusionSPLICEDICE
     allClusters = args.clusters
     outfilename = args.output
 

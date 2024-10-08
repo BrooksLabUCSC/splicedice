@@ -104,7 +104,7 @@ def getColIndexFromArray(x, y):
 
 def returnSamplesFromManifest(x):
     """
-    reads in mesa formatted manifest
+    reads in splicedice formatted manifest
     returns list of samples
     """
     s = list()
@@ -123,10 +123,10 @@ def returnSamplesFromManifest(x):
 
 def add_parser(parser):
     parser.add_argument(
-        "--psiMESA",
+        "--psiSPLICEDICE",
         type=str,
         required=True,
-        help="Compressed NPZ formatted PSI matrix from 'mesa quant'.",
+        help="Compressed NPZ formatted PSI matrix from 'splicedice quant'.",
     )
     parser.add_argument(
         "-m1",
@@ -167,7 +167,7 @@ def run_with(args):
     Values are assumed to not be normall distributed, thus
     we invoke the wilcoxon ranksum test as the statistical analysis.
     """
-    pmesa = args.psiMESA
+    psplicedice = args.psiSPLICEDICE
     group1 = args.manifest1
     group2 = args.manifest2
 
@@ -183,7 +183,7 @@ def run_with(args):
         sys.exit(1)
 
     # load psi
-    #data = loadNPZ(pmesa)
+    #data = loadNPZ(psplicedice)
 
     # table has 3 arrays, cols, rows and data
     #cols, rows, matrix = data["cols"], data["rows"], data["data"]
@@ -192,7 +192,7 @@ def run_with(args):
     ######
     rows = []
     data = []
-    with open(pmesa) as tsv:
+    with open(psplicedice) as tsv:
         headers = tsv.readline().strip().split('\t')[1:]
         for line in tsv:
             row = line.strip().split('\t')

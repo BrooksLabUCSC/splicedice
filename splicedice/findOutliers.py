@@ -28,11 +28,11 @@ import numpy as np
 def add_parser(parser):
     """Add command line argument parser for findOutliers module"""
     parser.add_argument(
-        "--psiMESA",
+        "--psiSPLICEDICE",
         type=str,
         action="store",
         required=True,
-        help="Compressed NPZ formatted PSI matrix from quantMESA.",
+        help="Compressed NPZ formatted PSI matrix from quantSPLICEDICE.",
     )
 
     parser.add_argument(
@@ -91,7 +91,7 @@ def loadNPZ(x):
 ########################################################################
 
 def run_with(args):
-    pmesa = args.psiMESA
+    psplicedice = args.psiSPLICEDICE
     man = args.manifest
     null = args.nullMan
     zthresh = args.outlierCutoff
@@ -114,7 +114,7 @@ def run_with(args):
         )
         sys.exit(1)
     # load psi
-    data = loadNPZ(pmesa)
+    data = loadNPZ(psplicedice)
     mSamps, mEvents, matrix = data["cols"], data["rows"], data["data"]
     # m is for matrix
     nullIndices = np.argwhere(np.isin(mSamps, nullSamps))[:, 0]

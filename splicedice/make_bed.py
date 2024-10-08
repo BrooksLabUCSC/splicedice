@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Make a bed file from MESA's compare_sample_sets output file
+Make a bed file from SPLICEDICE's compare_sample_sets output file
 """
 
 def deltaColor(delta):
@@ -38,13 +38,13 @@ def makeBed(bedfilename,vsfilename,use_corrected,alpha):
                     
 def get_args():
     import argparse
-    parser = argparse.ArgumentParser(description='Make bed file from output of mesa compare_sample_sets')
+    parser = argparse.ArgumentParser(description='Make bed file from output of splicedice compare_sample_sets')
     parser.add_argument('--alpha','-a',default=0.05,
                         help='Significance threshold for filtering based on p-value. Default 0.05')
     parser.add_argument('--use_corrected','-c',action='store_true',
                         help='Flag to use corrected p-value in filtering and output label. Default uses raw p-value')
     parser.add_argument('--input','-i',required=True,
-                        help='Comparison file from mesa compare_sample_sets')
+                        help='Comparison file from splicedice compare_sample_sets')
     parser.add_argument('--output','-o',required=True,
                         help='Output filename')
     return parser.parse_args()

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""This script is the main entry point for the different MESA commands."""
+"""This script is the main entry point for the different SPLICEDICE commands."""
 import argparse
 
-from . import MESA as quant
+from . import SPLICEDICE as quant
 from . import bam_to_junc_bed as bjb
 from . import pairwise_fisher as pf
 from . import compareSampleSets as css
@@ -17,9 +17,9 @@ from . import counts_to_ps as ctp
 def add_cmd(name, arg_parser_fn, run_with, subparser):
     """Adds a subparser command to the parser.  name is a string that denotes
     name of the command being added. This function helps a) simplify adding new
-    commands to the mesa tool b) also allows for using each python file as its
+    commands to the splicedice tool b) also allows for using each python file as its
     own script instead of relying on the __main__.py parser solely.
-    ie allows for `mesa quant` and `python quantMESA.py` to be easier to use.
+    ie allows for `splicedice quant` and `python quantSPLICEDICE.py` to be easier to use.
 
     arg_parser_fn is a function that takes a subparser and adds arguments based
     on the command. Modules typically expose an add_parser() function that does

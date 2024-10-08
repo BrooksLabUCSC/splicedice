@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-For subsetting a percent-spliced table output from mesa (filename ending with allPS.tsv).
+For subsetting a percent-spliced table output from splicedice (filename ending with allPS.tsv).
 """
 
 
@@ -19,7 +19,7 @@ def add_parser(parser):
                         help='Text file of samples to include in subset, one per line [Default includes all samples]')
     parser.add_argument('-i', '--inputFilename',
                         required=True,
-                        help='Table of PS values from MESA quant (*_allPS.tsv)')
+                        help='Table of PS values from SPLICEDICE quant (*_allPS.tsv)')
     parser.add_argument('-o', '--outputFilename',
                         required=True,
                         help='Table of PS values for selected samples and junctions')

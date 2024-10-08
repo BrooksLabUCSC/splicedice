@@ -1,5 +1,5 @@
 """
-MESA similarity
+SPLICEDICE similarity
 """
 
 def readVsFile(vs_filename):
@@ -75,7 +75,7 @@ def add_parser(parser):
                        help="Output table from compare_sample_sets")
     parser.add_argument("--allps","-a",
                         action="store",required=True,
-                       help="Allps table from mesa quant")
+                       help="Allps table from splicedice quant")
     parser.add_argument("--output","-o",
                         action="store",required=True,
                        help="Output filename")
@@ -99,7 +99,7 @@ def run_with(args):
 
 if __name__ == "__main__":
     import argparse 
-    parser = argparse.ArgumentParser(description='Scores similarity of samples to a condition from mesa compare_sample_sets.')           
+    parser = argparse.ArgumentParser(description='Scores similarity of samples to a condition from splicedice compare_sample_sets.')           
     add_parser(parser)
     args = parser.parse_args()
     run_with(args)

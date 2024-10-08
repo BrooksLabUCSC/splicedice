@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Mutually Exclusive Splicing Analysis (MESA) main quantification step
+Mutually Exclusive Splicing Analysis (SPLICEDICE) main quantification step
 
 """
 
@@ -25,7 +25,7 @@ class Sample:
             with open(self.filename) as bedfile:
                 info = bedfile.readline().split('\t')[3].split(';')
                 if info[0].startswith("e:") and info[1].startswith("o:"):
-                    self.type = "mesabed"
+                    self.type = "splicedicebed"
         elif self.filename.upper().endswith("SJ.OUT.TAB"):
             self.type = "SJ"
         elif self.filename.upper().endswith(".BAM"):
@@ -68,7 +68,7 @@ class Timer:
         
                         
         
-class MESA:
+class SPLICEDICE:
     """Main algorithm for Mutually Exclusive Splicing Analysis"""
     def __init__(self,manifestFilename,outputPrefix,args):
         """Call methods to get input, process, and write output"""
@@ -79,7 +79,7 @@ class MESA:
         self.manifestFilename = manifestFilename
         self.outputPrefix = outputPrefix
                 
-        # Construct MESA
+        # Construct SPLICEDICE
         timer = Timer()
         print("Parsing manifest...")
         self.manifest = self.parseManifest()
@@ -106,7 +106,7 @@ class MESA:
         self.writeJunctionBed()
         print("\tDone",timer.check())
         
-        # Quantify MESA
+        # Quantify SPLICEDICE
         print("Gathering junction counts...")
         self.counts, self.low = self.getJunctionCounts()
         print("\tDone",timer.check())
@@ -180,7 +180,7 @@ class MESA:
                             intronMotif in validMotifs):
                             junctions.add((chromosome,left,right,strand))
                             
-                elif sample.type == "mesabed":
+                elif sample.type == "splicedicebed":
                     for line in junctionFile:
                         row = line.rstrip().split("\t")
 
@@ -263,7 +263,7 @@ class MESA:
             
             with open(sample.filename,"r") as sampleFile:
                 
-                if sample.type == "bed" or sample.type == "mesabed" or sample.type == "leafcutter":
+                if sample.type == "bed" or sample.type == "splicedicebed" or sample.type == "leafcutter":
                     for line in sampleFile:
                         row = line.rstrip().split("\t")
 
@@ -402,11 +402,11 @@ def add_parser(parser):
                         help="Shannon's diversity index associated with a junction, minumum required for inclusion [Default 1]")
     
 def run_with(args):
-    """ Main program which calls MESA algorithm class"""
+    """ Main program which calls SPLICEDICE algorithm class"""
     manifestFilename = args.manifest
     outputPrefix = args.output_prefix
 
-    MESA(manifestFilename,outputPrefix,args)
+    SPLICEDICE(manifestFilename,outputPrefix,args)
 
 if __name__ == "__main__":
     import argparse 

@@ -1,5 +1,5 @@
 """
-MESA select
+SPLICEDICE select
 """
 
 def parseManifest(manifest_filename):
@@ -64,10 +64,10 @@ def add_parser(parser):
     """ """
     parser.add_argument("--allps1","-a1",
                         action="store",
-                       help="First allPS file output from mesa quant")
+                       help="First allPS file output from splicedice quant")
     parser.add_argument("--allps2","-a2",
                         action="store",
-                       help="Second allPS file output from mesa quant")
+                       help="Second allPS file output from splicedice quant")
     parser.add_argument("--manifest","-m",
                         action="store",
                         help="File with list of allPS file paths (supercedes allPS1 and allPS2)")

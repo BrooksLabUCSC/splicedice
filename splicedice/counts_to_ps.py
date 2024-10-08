@@ -82,13 +82,13 @@ def add_parser(parser):
     """ """
     parser.add_argument("--clusters","-c",
                         action="store",default=None,
-                       help="allClusters.tsv file from MESA")
+                       help="allClusters.tsv file from SPLICEDICE")
     parser.add_argument("--recluster","-r",
                         action="store_true",
                         help="Determine clusters from splice junctions in counts file")
     parser.add_argument("--inclusion_counts","-i",
                         action="store",required=True,
-                       help="inclusionCounts.tsv file from MESA")
+                       help="inclusionCounts.tsv file from SPLICEDICE")
     parser.add_argument("--output_prefix","-o",
                         action="store",required=True,
                        help="output filename path and prefix") 
