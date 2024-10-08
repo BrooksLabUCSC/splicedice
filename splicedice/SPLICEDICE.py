@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Mutually Exclusive Splicing Analysis (SPLICEDICE) main quantification step
+Main quantification step
 
 """
 
