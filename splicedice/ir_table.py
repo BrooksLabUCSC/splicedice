@@ -115,7 +115,7 @@ def calculateIR(samples,coverageDirectory,counts,clusters,annotated,args):
                 junctions.add(cluster)
                 median = float(row[4])
                 coverage[sample][cluster] = row[-1].split(",")
-                covArray = np.array(coverage[sample][cluster]).astype(np.float)
+                covArray = np.array(coverage[sample][cluster]).astype(float)
                 if args.makeRSDtable:
                     RSD[sample][cluster] = np.std(covArray) / np.mean(covArray)
                 try:
