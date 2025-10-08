@@ -18,9 +18,6 @@ def add_parser(parser):
     parser.add_argument("-o","--outputPrefix",
                         action="store",
                         help="")
-    parser.add_argument("-r","--makeRSDtable",
-                        action="store_true",
-                        help="Make a table of relative standard deviations in coverage across intron.")
     parser.add_argument("-s","--singleJunctionCalculation",
                         action="store_true",
                         help="Calculate IR value using individual junction counts, and not count of all junctions in cluster.")
@@ -116,8 +113,7 @@ def calculateIR(samples,coverageDirectory,counts,clusters,annotated,args):
                 median = float(row[4])
                 coverage[sample][cluster] = row[-1].split(",")
                 covArray = np.array(coverage[sample][cluster]).astype(float)
-                if args.makeRSDtable:
-                    RSD[sample][cluster] = np.std(covArray) / np.mean(covArray)
+                RSD[sample][cluster] = np.std(covArray) / np.mean(covArray)
                 try:
                     intronCount = counts[sample][cluster]
                     if not args.singleJunctionCalculation:
@@ -192,8 +188,7 @@ def run_with(args):
     print("Done",time.time()-start)
     print("Writing output...")
     writeIRtable(samples, outputPrefix, junctions, IR)
-    if args.makeRSDtable:
-        writeRSDtable(samples, outputPrefix, junctions, RSD)
+    writeRSDtable(samples, outputPrefix, junctions, RSD)
 
 
 if __name__ == "__main__":
