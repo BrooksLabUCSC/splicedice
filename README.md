@@ -8,6 +8,7 @@ user discretion is advised.
   * [Installation](#installation)
   * [Usage](#usage)
     + [Aligned RNA sequencing reads](#aligned-rna-sequencing-reads)
+    + [Manifests](#manifests)
     + [`splicedice bam_to_junc_bed`](#splicedice-bam_to_junc_bed)
     + [`splicedice quant`](#splicedice-quant)
       - [Output files](#output-files)
@@ -15,7 +16,6 @@ user discretion is advised.
     + [`splicedice pairwise`](#splicedice-pairwise)
     + [Intron Retention](#intron-retention)
 
-  * [Manifest Format](#manifest-format)
   * [Analyzing DRIMSeq output](#analyzing-drimseq-output)
   * [Contributing](#contributing)
   * [License](#license)
@@ -50,7 +50,39 @@ SpliceDICE uses counts of splice junctions from aligned RNA sequencing reads, to
 ### Aligned RNA sequencing reads
 SpliceDICE requires RNA sequencing reads that are aligned to a reference genome. 
 
-## Manifest files
+### Manifests
+bam_to_junc_bed requires a bam manifest, and quant requires a bed manifest pointing to bed files produced by bam_to_junc_bed.
+
+The bam and bed manifests are tab-delimitted files providing information about
+the samples and related files. 
+
+- The first column is the sample identifier.
+- The second column is the absolute path to the bam or bed file to be used as input
+- The third column is additional metadata for the type of sample it is. This column is for convience for your own analyses and not used by `splicedice`.
+- The fourth column is the condition. This is used to decide how the samples are
+grouped and the statistical analysis uses the different groups to compare.
+
+The manifests differ only in whether a bed or bam file is specified 
+
+Example bam file
+```bash
+$ cat manifest.txt
+sample1 /path/to/sample1/sample1.bam lung control
+sample2 /path/to/sample2/sample2.bam lung control
+sample3 /path/to/sample3/sample3.bam lung mutant
+sample4 /path/to/sample4/sample4.bam lung mutant
+```
+
+Example bed file
+```bash
+$ cat manifest.txt
+sample1 /path/to/sample1/sample1_sj.tab.bed lung control
+sample2 /path/to/sample2/sample2_sj.tab.bed lung control
+sample3 /path/to/sample3/sample3_sj.tab.bed lung mutant
+sample4 /path/to/sample4/sample4_sj.tab.bed lung mutant
+```
+
+An additional example of the bed manifest format can be found [here](data/example_manifest.txt).
 
 
 ### `splicedice bam_to_junc_bed`
@@ -109,24 +141,6 @@ $ splicedice intron_coverage -b bam_manifest.tsv -m project_allPS.tsv -j project
 $ splicedice ir_table -i project_inclusionCounts.tsv -c project_allClusters.tsv -d coverage_output_dir -o project_output_prefix
 ```
 
-
-## Manifest Format
-The manifest is a tab-delimitted file used by `splicedice` provides information about
-the samples and related files.
-```bash
-$ cat manifest.txt
-sample1 /path/to/sample1/sj.tab.bed lung control
-sample2 /path/to/sample2/sj.tab.bed lung control
-sample3 /path/to/sample3/sj.tab.bed lung mutant
-sample4 /path/to/sample4/sj.tab.bed lung mutant
-```
-- The first column is the sample identifier.
-- The second column is the absolute path to the bed file version of the star junction output file produced by `splicedice star_junc_to_bed`
-- The third column is additional metadata for the type of sample it is. This column is for convience for your own analyses and not used by `splicedice`.
-- The fourth column is the condition. This is used to decide how the samples are
-grouped and the statistical analysis uses the different groups to compare.
-
-An example of the manifest format can be found [here](data/example_manifest.txt).
 
 ## Analyzing DRIMSeq output
 `splicedice quant` can provide its output in a format for use with with the
