@@ -295,21 +295,13 @@ def add_parser(parser):
                        help="tab-separated list of samples with file paths")
     parser.add_argument("--output_prefix","-o",
                         action="store",required=True,
-                       help="prefix for output filenames") 
-    parser.add_argument("--minOverhang",type=int,default=5,
-                       help="minimum overlap on reads to support splice junction")
+                       help="prefix for output filenames")
     parser.add_argument("--drim",action="store_true",
                        help="create table for use by DRIMSeq")
-    parser.add_argument("--noMultimap",action="store_true",
-                       help="use only reads that uniquely map to one location")
     parser.add_argument("--filter",default="gtag_only",choices=["gtag_only"],
                        help="donor and acceptor intron sequences to include.")
-    parser.add_argument("--minUnique",type=int,default=5,
-                        help="minimum number of unique reads to support splice junction")
     parser.add_argument("--lowCoverageNan",action="store_true",
                         help="Report NaN for splicing events with coverage below minUnique")
-    parser.add_argument("--minEntropy",type=float,default=1,
-                        help="Shannon's diversity index associated with a junction, minumum required for inclusion [Default 1]")
     
 def run_with(args):
     """ Main program which calls SPLICEDICE algorithm class"""
