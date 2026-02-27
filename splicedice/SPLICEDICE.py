@@ -145,86 +145,37 @@ class SPLICEDICE:
                 
 
     def getAllJunctions(self):
-        """Read junctions from SJ_out_tab"""
-        
-        strandSymbol = {"0":"0", "1":"+", "2":"-", "+":"+", "-":"-"}
+        """
+        Build a union of junctions from all samples. 
+        Itterate the input manifest and read each input .bed file.
+
+        BED files are expected to have the following column format:
+        1. chromosome
+        2. left coordinate (0-based half open)
+        3. right coordinate (0-based half open)
+        4. Any (not used here)
+        5. Any (not used here)
+        6. strand (+ or -)
+
+        Only junctions with a valid strand (+ or -) are included.
+
+        Returns:
+            A set of tuples (chromosome, left, right, strand) representing all junctions observed in the input files.
+        """
+    
         plusminus = {"+","-"}
-        
-        filters = {"gtag_only":{1,2}, "gc_at":{1,2,3,4,5}, "all":{0,1,2,3,4,5,6}}
-        validMotifs = filters[self.args.filter]
-                
         junctions = set()
-        
         # Read all sample files from manifest
         for sample in self.manifest:
             with open(sample.filename,"r") as junctionFile:
-                
-                if sample.type == "SJ":
-                    for line in junctionFile:
-                        row = line.rstrip().split("\t")
-                        chromosome= row[0]
-                        left = int(row[1]) - 1
-                        right = int(row[2])
-                        strand = strandSymbol[row[3]]
-                        intronMotif = int(row[4])
-                        #annotation = int(row[5])
-                        #overhang = int(row[8])
-                        if self.args.noMultimap:
-                            score = int(row[6])
-                        else:
-                            score = int(row[6]) + int(row[7]) 
-                        if (right-left < self.args.maxLength and 
-                            right-left > self.args.minLength and
-                            strand != "0" and
-                            score >= self.args.minUnique and
-                            intronMotif in validMotifs):
-                            junctions.add((chromosome,left,right,strand))
-                            
-                elif sample.type == "splicedicebed":
-                    for line in junctionFile:
-                        row = line.rstrip().split("\t")
-
-                        score = int(row[4])
-                        
-                        info = [x.split(':') for x in row[3].split(';')]
-                        left = int(row[1])
-                        right = int(row[2])
-                        length = right-left
-                        
-                        if info[3][1] == "?":
-                            
-                            if score < self.args.minUnique:
-                                continue
-                            if length > self.args.maxLength or length < self.args.minLength:    
-                                continue
-                            if int(info[1][1]) < self.args.minOverhang:
-                                continue
-                            if float(info[0][1]) < self.args.minEntropy or float(info[0][2]) < self.args.minEntropy:
-                                continue
-                                
-                        strand = row[5]
-                        if strand in plusminus:
-                            chromosome = row[0]
-                            junctions.add((chromosome,left,right,strand))
-                            
-                elif sample.type == "bed" or sample.type == "leafcutter":
-                    for line in junctionFile:
-                        row = line.rstrip().split("\t")
-
-                        score = int(row[4])
-                        if score < self.args.minUnique:
-                            continue
-                             
-                        left = int(row[1])
-                        right = int(row[2])
-                        length = right-left
-                        if length > self.args.maxLength or length < self.args.minLength:    
-                            continue
-                        strand = row[5]
-                        if strand in plusminus:
-                            chromosome = row[0]
-                            junctions.add((chromosome,left,right,strand))
-                            
+                for line in junctionFile:
+                    row = line.rstrip().split("\t")                    
+                    chrom = row[0]
+                    start = int(row[1])
+                    end = int(row[2])
+                    strand = row[5]
+                    if strand in plusminus:
+                        junctions.add((chrom, start, end, strand))
         return junctions
         
     def getClusters(self):
