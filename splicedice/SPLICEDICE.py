@@ -295,8 +295,7 @@ def add_parser(parser):
                        help="prefix for output filenames")
     parser.add_argument("--drim",action="store_true",
                        help="create table for use by DRIMSeq")
-    parser.add_argument("--filter",default="gtag_only",choices=["gtag_only"],
-                       help="donor and acceptor intron sequences to include.")
+
     
 def run_with(args):
     """ Main program which calls SPLICEDICE algorithm class"""
