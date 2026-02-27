@@ -3,6 +3,15 @@
 """
 Main quantification step
 
+Precondition: All junctions reported to this script have passed necessary filters.
+
+Expected input bed formats:
+1. chromosome
+2. left coordinate (0-based half open)
+3. right coordinate (0-based half open)
+4. name (not used here)
+5. score (used as read count for quantification)
+6. strand (+ or -)
 """
 
 import numpy as np
@@ -304,11 +313,6 @@ class SPLICEDICE:
                 self.writeDrimLine(i,junction,junction,drimTable)
                 for excludedJunction in self.clusters[junction]:
                     self.writeDrimLine(i,junction,excludedJunction,drimTable)
-        
-                
-                
-                
-
         
 def add_parser(parser):
     """ """
