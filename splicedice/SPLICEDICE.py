@@ -22,21 +22,11 @@ from time import time
 class Sample:
     
     sampleList = []
-    groups = {}
     
     def __init__(self,manifestLine):
-        
         self.name = manifestLine[0]
         self.filename = manifestLine[1]
         Sample.sampleList.append(self)
-
-        self.metadata = manifestLine[2]
-        self.condition = manifestLine[3]
-
-        if self.condition in Sample.groups:
-            Sample.groups[self.condition].append(self)
-        else:
-            Sample.groups[self.condition] = [self]
             
 class Timer:
     def __init__(self):
