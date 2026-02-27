@@ -222,10 +222,7 @@ class SPLICEDICE:
             exclusions = np.zeros(len(self.manifest))
             for excluded in self.clusters[junction]:
                 exclusions += self.counts[self.junctionIndex[excluded],:]
-            psi[self.junctionIndex[junction],:] = inclusions / (inclusions + exclusions)
-        if self.args.lowCoverageNan:
-            for junctionIndex,sampleIndex in self.low:
-                psi[junctionIndex,sampleIndex] = np.nan          
+            psi[self.junctionIndex[junction],:] = inclusions / (inclusions + exclusions)        
         return psi
 
     def junctionString(self,junction):
@@ -300,8 +297,6 @@ def add_parser(parser):
                        help="create table for use by DRIMSeq")
     parser.add_argument("--filter",default="gtag_only",choices=["gtag_only"],
                        help="donor and acceptor intron sequences to include.")
-    parser.add_argument("--lowCoverageNan",action="store_true",
-                        help="Report NaN for splicing events with coverage below minUnique")
     
 def run_with(args):
     """ Main program which calls SPLICEDICE algorithm class"""
