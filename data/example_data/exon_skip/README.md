@@ -25,3 +25,6 @@ Splice junctions:
 
 - `ps_100.bed`  
   Only sj1/sj2 have reads → PS = 100%
+
+- `cntrl.bed`  
+  One unrelated junction.

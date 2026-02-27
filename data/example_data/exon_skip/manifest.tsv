@@ -1,3 +1,4 @@
 ps_0	data/example_data/exon_skip/ps_0.bed	.	control
 ps_50	data/example_data/exon_skip/ps_50.bed	.	mutant
 ps_100	data/example_data/exon_skip/ps_100.bed	.	mutant
+cntrl	data/example_data/exon_skip/cntrl.bed	.	control
