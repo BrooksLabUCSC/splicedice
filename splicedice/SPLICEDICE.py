@@ -47,9 +47,7 @@ class Timer:
         minutes = int((passed % 3600) // 60)
         seconds = passed % 60
         return f"[{hours}:{minutes:02d}:{seconds:02.2f}]"
-        
-        
-                        
+
         
 class SPLICEDICE:
     """Main algorithm for Mutually Exclusive Splicing Analysis"""
@@ -58,7 +56,6 @@ class SPLICEDICE:
         # Parsed Arguments: 
         self.args = args
         
-        #
         self.manifestFilename = manifestFilename
         self.outputPrefix = outputPrefix
                 
@@ -73,7 +70,6 @@ class SPLICEDICE:
         self.junctions = self.getAllJunctions()
         print("\tDone",timer.check())
 
-        
         print(f"Finding clusters from {len(self.junctions)} junctions...")
         self.clusters = self.getClusters()
         self.junctionIndex = {junction:i for i,junction in enumerate(sorted(self.clusters))}
@@ -117,7 +113,6 @@ class SPLICEDICE:
         
         print("All done",timer.total())
         
-        
     def parseManifest(self):
         """Get sample info and paths from manifest"""
         manifest = []
@@ -128,8 +123,7 @@ class SPLICEDICE:
                     pass # improperly formatted manifest
                 sample = Sample(row)
                 manifest.append(sample)
-        return manifest
-                
+        return manifest     
 
     def getAllJunctions(self):
         """
@@ -236,7 +230,6 @@ class SPLICEDICE:
                 name = f"{chromosome}:{left}-{right}:{strand}"
                 outbed.write(f"{chromosome}\t{left}\t{right}\t{name}\t0\t{strand}\n")
             
-        
     def writeClusters(self):
         """"""
         with open(f"{self.outputPrefix}_allClusters.tsv","w") as clusterFile:
@@ -284,7 +277,8 @@ class SPLICEDICE:
                 self.writeDrimLine(i,junction,junction,drimTable)
                 for excludedJunction in self.clusters[junction]:
                     self.writeDrimLine(i,junction,excludedJunction,drimTable)
-        
+
+  
 def add_parser(parser):
     """ """
     parser.add_argument("--manifest","-m",
@@ -296,13 +290,14 @@ def add_parser(parser):
     parser.add_argument("--drim",action="store_true",
                        help="create table for use by DRIMSeq")
 
-    
+
 def run_with(args):
     """ Main program which calls SPLICEDICE algorithm class"""
     manifestFilename = args.manifest
     outputPrefix = args.output_prefix
 
     SPLICEDICE(manifestFilename,outputPrefix,args)
+
 
 if __name__ == "__main__":
     import argparse 
