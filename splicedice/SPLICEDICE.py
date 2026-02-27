@@ -296,10 +296,6 @@ def add_parser(parser):
     parser.add_argument("--output_prefix","-o",
                         action="store",required=True,
                        help="prefix for output filenames") 
-    parser.add_argument("--maxLength",type=int,default=50000,
-                       help="maximum splice junction size")
-    parser.add_argument("--minLength",type=int,default=50,
-                       help="minimum splice junction size")
     parser.add_argument("--minOverhang",type=int,default=5,
                        help="minimum overlap on reads to support splice junction")
     parser.add_argument("--drim",action="store_true",
