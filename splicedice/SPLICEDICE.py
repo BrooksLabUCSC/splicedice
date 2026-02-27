@@ -12,6 +12,8 @@ Expected input bed formats:
 4. name (not used here)
 5. score (used as read count for quantification)
 6. strand (+ or -)
+
+TODO validation for bed input format
 """
 
 import numpy as np
