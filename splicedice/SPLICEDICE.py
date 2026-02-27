@@ -108,7 +108,11 @@ class SPLICEDICE:
         
         # Quantify SPLICEDICE
         print("Gathering junction counts...")
-        self.counts, self.low = self.getJunctionCounts()
+        self.counts = self.getJunctionCounts()
+        
+        # TODO remove self.low. Placehodler for refactor
+        self.low = []
+
         print("\tDone",timer.check())
         
         print("Writing inclusion counts...")
@@ -206,44 +210,25 @@ class SPLICEDICE:
         return clusters
             
     def getJunctionCounts(self):
-        """ """
+        """
+        Build a matrix of junction counts. This matrix allows any sample to report a read count for 
+        all juntctions in the union of each sample's junctions. Junctions not observed in a sample will have a count of 0.
+
+        Returns:
+            A 2D numpy array of shape (number of junctions across all samples, number of samples) where 
+            each entry [i, j] contains the read count for junction i in sample j.
+        """
         counts = np.zeros((len(self.clusters),len(self.manifest)),dtype='float32')
-        low = []
-        
         for sampleIndex,sample in enumerate(self.manifest):
-            
             with open(sample.filename,"r") as sampleFile:
-                
-                if sample.type == "bed" or sample.type == "splicedicebed" or sample.type == "leafcutter":
-                    for line in sampleFile:
-                        row = line.rstrip().split("\t")
-
-                        junction = (row[0], int(row[1]), int(row[2]), row[5])
-                        
-                        if junction in self.junctionIndex:
-                            score = int(row[4])
-                            counts[self.junctionIndex[junction],sampleIndex] = score
-                            if self.args.lowCoverageNan and score < self.args.minUnique:
-                                low.append((self.junctionIndex[junction],sampleIndex))
-                    
-                elif sample.type == "SJ":
-                                        
-                    strandSymbol = {'0':'0', '1':'+', '2':'-'}
-                    
-                    for line in sampleFile:
-                        row = line.rstrip().split("\t")
-
-                        junction = (row[0], int(row[1])-1, int(row[2]), strandSymbol[row[3]])
-
-                                                    
-                        if junction in self.junctionIndex:
-                            if self.args.noMultimap:
-                                counts[self.junctionIndex[junction],sampleIndex] = int(row[6])
-                            else:
-                                counts[self.junctionIndex[junction],sampleIndex] = int(row[6]) + int(row[7]) 
-                          
-
-        return counts, low
+                for line in sampleFile:
+                    row = line.rstrip().split("\t")
+                    # TODO this should not enforce BED
+                    junction = (row[0], int(row[1]), int(row[2]), row[5])
+                    if junction in self.junctionIndex:
+                        score = int(row[4])
+                        counts[self.junctionIndex[junction],sampleIndex] = score
+        return counts
                         
     def calculatePsi(self):
         """ """
