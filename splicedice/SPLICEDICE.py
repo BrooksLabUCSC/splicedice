@@ -27,24 +27,6 @@ class Sample:
         self.name = manifestLine[0]
         self.filename = manifestLine[1]
         Sample.sampleList.append(self)
-        
-        # Check filetype
-        if self.filename.upper().endswith(".BED"):
-            self.type = "bed"
-            with open(self.filename) as bedfile:
-                info = bedfile.readline().split('\t')[3].split(';')
-                if info[0].startswith("e:") and info[1].startswith("o:"):
-                    self.type = "splicedicebed"
-        elif self.filename.upper().endswith("SJ.OUT.TAB"):
-            self.type = "SJ"
-        elif self.filename.upper().endswith(".BAM"):
-            self.type = "bam"
-        elif self.filename.upper().endswith("LEAFCUTTER.JUNC"):
-            self.type = "leafcutter"
-        else:
-            self.type = "unknown"
-            
-        
 
         self.metadata = manifestLine[2]
         self.condition = manifestLine[3]
