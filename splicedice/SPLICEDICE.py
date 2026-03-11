@@ -235,7 +235,7 @@ class SPLICEDICE:
         with open(f"{self.outputPrefix}_junctions.bed", "w") as outbed:
             for junction in sorted(self.junctions):
                 chromosome,left,right,strand = junction
-                name = f"{chromosome}:{left}-{right}:{strand}"
+                name = self.junctionString(junction, True)
                 outbed.write(f"{chromosome}\t{left}\t{right}\t{name}\t0\t{strand}\n")
             
     def writeClusters(self):
