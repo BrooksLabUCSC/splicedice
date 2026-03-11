@@ -267,7 +267,7 @@ class SPLICEDICE:
 
             
             for i,junction in enumerate(sorted(self.clusters)):
-                allpsTsv.write(f"{self.junctionString(junction)}\t{tab.join([f'{x:.3f}' for x in self.psi[i,:]])}\n")
+                allpsTsv.write(f"{self.junctionString(junction, True)}\t{tab.join([f'{x:.3f}' for x in self.psi[i,:]])}\n")
                 
     def writeDrimLine(self,i,junction,other,file):
         """Format and output line for drim table"""
