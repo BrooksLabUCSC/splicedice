@@ -21,7 +21,8 @@ Splice junctions:
   Only sj3 has reads → PS = 0%
 
 - `ps_50.bed`  
-  sj1/sj2 equal to sj3 → PS = 50%
+  sj1/sj2 have equal # of reads → PS = 50%
+  sj3 has equal # of reads to sj1/sj2. The cluster informs the PS which is 1/3 → PS = 33%
 
 - `ps_100.bed`  
   Only sj1/sj2 have reads → PS = 100%
