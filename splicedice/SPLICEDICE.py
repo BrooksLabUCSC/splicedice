@@ -242,8 +242,8 @@ class SPLICEDICE:
         """"""
         with open(f"{self.outputPrefix}_allClusters.tsv","w") as clusterFile:
             for junction in sorted(self.clusters):
-                line = f"{junction[0]}:{junction[1]}-{junction[2]}:{junction[3]}\t"
-                line += ",".join([f"{j[0]}:{j[1]}-{j[2]}:{j[3]}" for j in self.clusters[junction]])
+                line = f"{self.junctionString(junction)}\t"
+                line += ",".join([f"{self.junctionString(j)}" for j in self.clusters[junction]])
                 print(line, file=clusterFile)
                 
     def writeInclusions(self):
