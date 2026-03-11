@@ -271,8 +271,8 @@ class SPLICEDICE:
                 
     def writeDrimLine(self,i,junction,other,file):
         """Format and output line for drim table"""
-        print(f"cl_{i}_{self.junctionString(junction)}",
-              f"{self.junctionString(other)}_{i}",
+        print(f"cl_{i}_{self.junctionString(junction, True)}",
+              f"{self.junctionString(other, True)}_{i}",
               "\t".join(self.counts[self.junctionIndex[other],:].astype("str")),
               sep="\t", file=file)
         
