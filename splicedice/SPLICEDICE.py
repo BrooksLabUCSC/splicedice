@@ -219,9 +219,19 @@ class SPLICEDICE:
             psi[self.junctionIndex[junction],:] = inclusions / (inclusions + exclusions)        
         return psi
 
-    def junctionString(self,junction):
-        """ """
-        return f"{junction[0]}:{junction[1]}-{junction[2]}:{junction[3]}"
+    def junctionString(self, junction, one_based=False):
+        """
+        Convert a junction tuple to a string representation.
+
+        Args:
+            junction (tuple): A tuple containing (chromosome, left, right, strand).
+            one_based (bool): If True, convert coordinates to 1-based. Default is False (0-based half open).
+        """        
+        chromosome = junction[0]
+        start = junction[1] + 1 if one_based else junction[1]
+        end = junction[2]
+        strand = junction[3]
+        return f"{chromosome}:{start}-{end}:{strand}"
         
     def writeJunctionBed(self):
         with open(f"{self.outputPrefix}_junctions.bed", "w") as outbed:
