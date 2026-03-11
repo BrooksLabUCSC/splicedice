@@ -254,7 +254,7 @@ class SPLICEDICE:
 
             
             for i,junction in enumerate(sorted(self.clusters)):
-                inclusionTsv.write(f"{self.junctionString(junction)}\t{tab.join([f'{x:.0f}' for x in self.counts[i,:]])}\n")
+                inclusionTsv.write(f"{self.junctionString(junction, True)}\t{tab.join([f'{x:.0f}' for x in self.counts[i,:]])}\n")
                 
                 
     def writeAllpsi(self):
