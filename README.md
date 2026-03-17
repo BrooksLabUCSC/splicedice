@@ -8,7 +8,6 @@ user discretion is advised.
   * [Installation](#installation)
   * [Usage](#usage)
     + [Aligned RNA sequencing reads](#aligned-rna-sequencing-reads)
-    + [`splicedice bam_to_junc_bed`](#splicedice-bam_to_junc_bed)
     + [`splicedice quant`](#splicedice-quant)
       - [Output files](#output-files)
     + [`splicedice compare_sample_sets`](#splicedice-compare_sample_sets)
@@ -51,13 +50,6 @@ SpliceDICE uses counts of splice junctions from aligned RNA sequencing reads, to
 SpliceDICE requires RNA sequencing reads that are aligned to a reference genome. 
 
 ## Manifest files
-
-
-### `splicedice bam_to_junc_bed`
-Searches aligned RNA-seq reads (BAM files) for splice junctions, and outputs a bed file with junction counts. Takes a manifest with file paths, and outputs a .junc.bed file for each BAM.
-```bash
-$ splicedice bam_to_junc_bed -m bam_manifest.txt
-```
 
 ### `splicedice quant`
 Processes junction count files (bed files from `splicedice bam_to_junc_bed` or SJ.out.tab from STAR aligner) to calculate Percent-Spliced (PS) value for every splice junction in every sample in the manifest.
