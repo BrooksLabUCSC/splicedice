@@ -195,7 +195,6 @@ class SPLICEDICE:
             with open(sample.filename,"r") as sampleFile:
                 for line in sampleFile:
                     row = line.rstrip().split("\t")
-                    # TODO this should not enforce BED
                     junction = (row[0], int(row[1]), int(row[2]), row[5])
                     if junction in self.junctionIndex:
                         score = int(row[4])
