@@ -86,9 +86,6 @@ class SPLICEDICE:
         # Quantify SPLICEDICE
         print("Gathering junction counts...")
         self.counts = self.getJunctionCounts()
-        
-        # TODO remove self.low. Placehodler for refactor
-        self.low = []
 
         print("\tDone",timer.check())
         
