@@ -3,7 +3,6 @@
 import argparse
 
 from . import SPLICEDICE as quant
-from . import bam_to_junc_bed as bjb
 from . import pairwise_fisher as pf
 from . import compareSampleSets as css
 from . import findOutliers as fo
@@ -37,7 +36,6 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers()
 
-    add_cmd("bam_to_junc_bed", bjb.add_parser, bjb.run_with, subparsers)
     add_cmd("quant", quant.add_parser, quant.run_with, subparsers)
     add_cmd("intron_coverage", ic.add_parser, ic.run_with, subparsers)
     add_cmd("ir_table", it.add_parser, it.run_with, subparsers)

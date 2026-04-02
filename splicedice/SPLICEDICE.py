@@ -3,6 +3,15 @@
 """
 Main quantification step
 
+Precondition: All junctions reported to this script have passed necessary filters.
+
+Expected input bed formats:
+1. chromosome
+2. left coordinate (0-based half open)
+3. right coordinate (0-based half open)
+4. name (not used here)
+5. score (used as read count for quantification)
+6. strand (+ or -)
 """
 
 import numpy as np
@@ -11,39 +20,11 @@ from time import time
 class Sample:
     
     sampleList = []
-    groups = {}
     
     def __init__(self,manifestLine):
-        
         self.name = manifestLine[0]
         self.filename = manifestLine[1]
         Sample.sampleList.append(self)
-        
-        # Check filetype
-        if self.filename.upper().endswith(".BED"):
-            self.type = "bed"
-            with open(self.filename) as bedfile:
-                info = bedfile.readline().split('\t')[3].split(';')
-                if info[0].startswith("e:") and info[1].startswith("o:"):
-                    self.type = "splicedicebed"
-        elif self.filename.upper().endswith("SJ.OUT.TAB"):
-            self.type = "SJ"
-        elif self.filename.upper().endswith(".BAM"):
-            self.type = "bam"
-        elif self.filename.upper().endswith("LEAFCUTTER.JUNC"):
-            self.type = "leafcutter"
-        else:
-            self.type = "unknown"
-            
-        
-
-        self.metadata = manifestLine[2]
-        self.condition = manifestLine[3]
-
-        if self.condition in Sample.groups:
-            Sample.groups[self.condition].append(self)
-        else:
-            Sample.groups[self.condition] = [self]
             
 class Timer:
     def __init__(self):
@@ -64,9 +45,7 @@ class Timer:
         minutes = int((passed % 3600) // 60)
         seconds = passed % 60
         return f"[{hours}:{minutes:02d}:{seconds:02.2f}]"
-        
-        
-                        
+
         
 class SPLICEDICE:
     """Main algorithm for Mutually Exclusive Splicing Analysis"""
@@ -75,7 +54,6 @@ class SPLICEDICE:
         # Parsed Arguments: 
         self.args = args
         
-        #
         self.manifestFilename = manifestFilename
         self.outputPrefix = outputPrefix
                 
@@ -90,7 +68,6 @@ class SPLICEDICE:
         self.junctions = self.getAllJunctions()
         print("\tDone",timer.check())
 
-        
         print(f"Finding clusters from {len(self.junctions)} junctions...")
         self.clusters = self.getClusters()
         self.junctionIndex = {junction:i for i,junction in enumerate(sorted(self.clusters))}
@@ -108,7 +85,8 @@ class SPLICEDICE:
         
         # Quantify SPLICEDICE
         print("Gathering junction counts...")
-        self.counts, self.low = self.getJunctionCounts()
+        self.counts = self.getJunctionCounts()
+
         print("\tDone",timer.check())
         
         print("Writing inclusion counts...")
@@ -130,7 +108,6 @@ class SPLICEDICE:
         
         print("All done",timer.total())
         
-        
     def parseManifest(self):
         """Get sample info and paths from manifest"""
         manifest = []
@@ -141,90 +118,40 @@ class SPLICEDICE:
                     pass # improperly formatted manifest
                 sample = Sample(row)
                 manifest.append(sample)
-        return manifest
-                
+        return manifest     
 
     def getAllJunctions(self):
-        """Read junctions from SJ_out_tab"""
-        
-        strandSymbol = {"0":"0", "1":"+", "2":"-", "+":"+", "-":"-"}
+        """
+        Build a union of junctions from all samples. 
+        Iterate the input manifest and read each input .bed file.
+
+        BED files are expected to have the following column format:
+        1. chromosome
+        2. left coordinate (0-based half open)
+        3. right coordinate (0-based half open)
+        4. Any (not used here)
+        5. Any (not used here)
+        6. strand (+ or -)
+
+        Only junctions with a valid strand (+ or -) are included.
+
+        Returns:
+            A set of tuples (chromosome, left, right, strand) representing all junctions observed in the input files.
+        """
+    
         plusminus = {"+","-"}
-        
-        filters = {"gtag_only":{1,2}, "gc_at":{1,2,3,4,5}, "all":{0,1,2,3,4,5,6}}
-        validMotifs = filters[self.args.filter]
-                
         junctions = set()
-        
         # Read all sample files from manifest
         for sample in self.manifest:
             with open(sample.filename,"r") as junctionFile:
-                
-                if sample.type == "SJ":
-                    for line in junctionFile:
-                        row = line.rstrip().split("\t")
-                        chromosome= row[0]
-                        left = int(row[1]) - 1
-                        right = int(row[2])
-                        strand = strandSymbol[row[3]]
-                        intronMotif = int(row[4])
-                        #annotation = int(row[5])
-                        #overhang = int(row[8])
-                        if self.args.noMultimap:
-                            score = int(row[6])
-                        else:
-                            score = int(row[6]) + int(row[7]) 
-                        if (right-left < self.args.maxLength and 
-                            right-left > self.args.minLength and
-                            strand != "0" and
-                            score >= self.args.minUnique and
-                            intronMotif in validMotifs):
-                            junctions.add((chromosome,left,right,strand))
-                            
-                elif sample.type == "splicedicebed":
-                    for line in junctionFile:
-                        row = line.rstrip().split("\t")
-
-                        score = int(row[4])
-                        
-                        info = [x.split(':') for x in row[3].split(';')]
-                        left = int(row[1])
-                        right = int(row[2])
-                        length = right-left
-                        
-                        if info[3][1] == "?":
-                            
-                            if score < self.args.minUnique:
-                                continue
-                            if length > self.args.maxLength or length < self.args.minLength:    
-                                continue
-                            if int(info[1][1]) < self.args.minOverhang:
-                                continue
-                            if float(info[0][1]) < self.args.minEntropy or float(info[0][2]) < self.args.minEntropy:
-                                continue
-                                
-                        strand = row[5]
-                        if strand in plusminus:
-                            chromosome = row[0]
-                            junctions.add((chromosome,left,right,strand))
-                            
-                elif sample.type == "bed" or sample.type == "leafcutter":
-                    for line in junctionFile:
-                        row = line.rstrip().split("\t")
-
-                        score = int(row[4])
-                        if score < self.args.minUnique:
-                            continue
-                             
-                        left = int(row[1])
-                        right = int(row[2])
-                        length = right-left
-                        if length > self.args.maxLength or length < self.args.minLength:    
-                            continue
-                        strand = row[5]
-                        if strand in plusminus:
-                            chromosome = row[0]
-                            junctions.add((chromosome,left,right,strand))
-                            
+                for line in junctionFile:
+                    row = line.rstrip().split("\t")                    
+                    chrom = row[0]
+                    start = int(row[1])
+                    end = int(row[2])
+                    strand = row[5]
+                    if strand in plusminus:
+                        junctions.add((chrom, start, end, strand))
         return junctions
         
     def getClusters(self):
@@ -255,44 +182,24 @@ class SPLICEDICE:
         return clusters
             
     def getJunctionCounts(self):
-        """ """
+        """
+        Build a matrix of junction counts. This matrix allows any sample to report a read count for 
+        all junctions in the union of each sample's junctions. Junctions not observed in a sample will have a count of 0.
+
+        Returns:
+            A 2D numpy array of shape (number of junctions across all samples, number of samples) where 
+            each entry [i, j] contains the read count for junction i in sample j.
+        """
         counts = np.zeros((len(self.clusters),len(self.manifest)),dtype='float32')
-        low = []
-        
         for sampleIndex,sample in enumerate(self.manifest):
-            
             with open(sample.filename,"r") as sampleFile:
-                
-                if sample.type == "bed" or sample.type == "splicedicebed" or sample.type == "leafcutter":
-                    for line in sampleFile:
-                        row = line.rstrip().split("\t")
-
-                        junction = (row[0], int(row[1]), int(row[2]), row[5])
-                        
-                        if junction in self.junctionIndex:
-                            score = int(row[4])
-                            counts[self.junctionIndex[junction],sampleIndex] = score
-                            if self.args.lowCoverageNan and score < self.args.minUnique:
-                                low.append((self.junctionIndex[junction],sampleIndex))
-                    
-                elif sample.type == "SJ":
-                                        
-                    strandSymbol = {'0':'0', '1':'+', '2':'-'}
-                    
-                    for line in sampleFile:
-                        row = line.rstrip().split("\t")
-
-                        junction = (row[0], int(row[1])-1, int(row[2]), strandSymbol[row[3]])
-
-                                                    
-                        if junction in self.junctionIndex:
-                            if self.args.noMultimap:
-                                counts[self.junctionIndex[junction],sampleIndex] = int(row[6])
-                            else:
-                                counts[self.junctionIndex[junction],sampleIndex] = int(row[6]) + int(row[7]) 
-                          
-
-        return counts, low
+                for line in sampleFile:
+                    row = line.rstrip().split("\t")
+                    junction = (row[0], int(row[1]), int(row[2]), row[5])
+                    if junction in self.junctionIndex:
+                        score = int(row[4])
+                        counts[self.junctionIndex[junction],sampleIndex] = score
+        return counts
                         
     def calculatePsi(self):
         """ """
@@ -303,30 +210,36 @@ class SPLICEDICE:
             exclusions = np.zeros(len(self.manifest))
             for excluded in self.clusters[junction]:
                 exclusions += self.counts[self.junctionIndex[excluded],:]
-            psi[self.junctionIndex[junction],:] = inclusions / (inclusions + exclusions)
-        if self.args.lowCoverageNan:
-            for junctionIndex,sampleIndex in self.low:
-                psi[junctionIndex,sampleIndex] = np.nan          
+            psi[self.junctionIndex[junction],:] = inclusions / (inclusions + exclusions)        
         return psi
 
-    def junctionString(self,junction):
-        """ """
-        return f"{junction[0]}:{junction[1]}-{junction[2]}:{junction[3]}"
+    def junctionString(self, junction, one_based=False):
+        """
+        Convert a junction tuple to a string representation.
+
+        Args:
+            junction (tuple): A tuple containing (chromosome, left, right, strand).
+            one_based (bool): If True, convert coordinates to 1-based. Default is False (0-based half open).
+        """        
+        chromosome = junction[0]
+        start = junction[1] + 1 if one_based else junction[1]
+        end = junction[2]
+        strand = junction[3]
+        return f"{chromosome}:{start}-{end}:{strand}"
         
     def writeJunctionBed(self):
         with open(f"{self.outputPrefix}_junctions.bed", "w") as outbed:
             for junction in sorted(self.junctions):
                 chromosome,left,right,strand = junction
-                name = f"{chromosome}:{left}-{right}:{strand}"
+                name = self.junctionString(junction, True)
                 outbed.write(f"{chromosome}\t{left}\t{right}\t{name}\t0\t{strand}\n")
             
-        
     def writeClusters(self):
         """"""
         with open(f"{self.outputPrefix}_allClusters.tsv","w") as clusterFile:
             for junction in sorted(self.clusters):
-                line = f"{junction[0]}:{junction[1]}-{junction[2]}:{junction[3]}\t"
-                line += ",".join([f"{j[0]}:{j[1]}-{j[2]}:{j[3]}" for j in self.clusters[junction]])
+                line = f"{self.junctionString(junction, True)}\t"
+                line += ",".join([f"{self.junctionString(j, True)}" for j in self.clusters[junction]])
                 print(line, file=clusterFile)
                 
     def writeInclusions(self):
@@ -337,7 +250,7 @@ class SPLICEDICE:
 
             
             for i,junction in enumerate(sorted(self.clusters)):
-                inclusionTsv.write(f"{self.junctionString(junction)}\t{tab.join([f'{x:.0f}' for x in self.counts[i,:]])}\n")
+                inclusionTsv.write(f"{self.junctionString(junction, True)}\t{tab.join([f'{x:.0f}' for x in self.counts[i,:]])}\n")
                 
                 
     def writeAllpsi(self):
@@ -350,12 +263,12 @@ class SPLICEDICE:
 
             
             for i,junction in enumerate(sorted(self.clusters)):
-                allpsTsv.write(f"{self.junctionString(junction)}\t{tab.join([f'{x:.3f}' for x in self.psi[i,:]])}\n")
+                allpsTsv.write(f"{self.junctionString(junction, True)}\t{tab.join([f'{x:.3f}' for x in self.psi[i,:]])}\n")
                 
     def writeDrimLine(self,i,junction,other,file):
         """Format and output line for drim table"""
-        print(f"cl_{i}_{self.junctionString(junction)}",
-              f"{self.junctionString(other)}_{i}",
+        print(f"cl_{i}_{self.junctionString(junction, True)}",
+              f"{self.junctionString(other, True)}_{i}",
               "\t".join(self.counts[self.junctionIndex[other],:].astype("str")),
               sep="\t", file=file)
         
@@ -368,12 +281,8 @@ class SPLICEDICE:
                 self.writeDrimLine(i,junction,junction,drimTable)
                 for excludedJunction in self.clusters[junction]:
                     self.writeDrimLine(i,junction,excludedJunction,drimTable)
-        
-                
-                
-                
 
-        
+  
 def add_parser(parser):
     """ """
     parser.add_argument("--manifest","-m",
@@ -381,32 +290,18 @@ def add_parser(parser):
                        help="tab-separated list of samples with file paths")
     parser.add_argument("--output_prefix","-o",
                         action="store",required=True,
-                       help="prefix for output filenames") 
-    parser.add_argument("--maxLength",type=int,default=50000,
-                       help="maximum splice junction size")
-    parser.add_argument("--minLength",type=int,default=50,
-                       help="minimum splice junction size")
-    parser.add_argument("--minOverhang",type=int,default=5,
-                       help="minimum overlap on reads to support splice junction")
+                       help="prefix for output filenames")
     parser.add_argument("--drim",action="store_true",
                        help="create table for use by DRIMSeq")
-    parser.add_argument("--noMultimap",action="store_true",
-                       help="use only reads that uniquely map to one location")
-    parser.add_argument("--filter",default="gtag_only",choices=["gtag_only"],
-                       help="donor and acceptor intron sequences to include.")
-    parser.add_argument("--minUnique",type=int,default=5,
-                        help="minimum number of unique reads to support splice junction")
-    parser.add_argument("--lowCoverageNan",action="store_true",
-                        help="Report NaN for splicing events with coverage below minUnique")
-    parser.add_argument("--minEntropy",type=float,default=1,
-                        help="Shannon's diversity index associated with a junction, minumum required for inclusion [Default 1]")
-    
+
+
 def run_with(args):
     """ Main program which calls SPLICEDICE algorithm class"""
     manifestFilename = args.manifest
     outputPrefix = args.output_prefix
 
     SPLICEDICE(manifestFilename,outputPrefix,args)
+
 
 if __name__ == "__main__":
     import argparse 

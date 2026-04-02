@@ -8,7 +8,6 @@ user discretion is advised.
   * [Installation](#installation)
   * [Usage](#usage)
     + [Aligned RNA sequencing reads](#aligned-rna-sequencing-reads)
-    + [`splicedice bam_to_junc_bed`](#splicedice-bam_to_junc_bed)
     + [`splicedice quant`](#splicedice-quant)
       - [Output files](#output-files)
     + [`splicedice compare_sample_sets`](#splicedice-compare_sample_sets)
@@ -45,23 +44,31 @@ $ pip install --user -e .
 
 ## Usage
 
-SpliceDICE uses counts of splice junctions from aligned RNA sequencing reads, to calculate a Percent-Spliced (PS) value for each junction. It performs best when the junction counts are gathered from a BAM file using `splicedice bam_to_junc_bed`, but can accept
+SpliceDICE uses splice junction counts derived from aligned RNA sequencing reads to calculate a Percent-Spliced (PS) value for each junction.
+
+**Suggested tools for generating junction counts:**
+- [intronProspector](https://github.com/diekhans/intronProspector)
 
 ### Aligned RNA sequencing reads
 SpliceDICE requires RNA sequencing reads that are aligned to a reference genome. 
 
 ## Manifest files
 
-
-### `splicedice bam_to_junc_bed`
-Searches aligned RNA-seq reads (BAM files) for splice junctions, and outputs a bed file with junction counts. Takes a manifest with file paths, and outputs a .junc.bed file for each BAM.
-```bash
-$ splicedice bam_to_junc_bed -m bam_manifest.txt
-```
-
 ### `splicedice quant`
-Processes junction count files (bed files from `splicedice bam_to_junc_bed` or SJ.out.tab from STAR aligner) to calculate Percent-Spliced (PS) value for every splice junction in every sample in the manifest.
+Processes junction count files (bed6 files) to calculate Percent-Spliced (PS) value for every splice junction in every sample in the manifest.
 For information on the `bed_manifest.txt` format, see [Manifest Format](#manifest-format).
+
+BED input format (per sample file):
+- Tab-delimited BED6 with columns: `chrom`, `start`, `end`, `name`, `score`, `strand`.
+- Genomic coordinates must use 0-based, half-open BED convention (UCSC standard).
+- `score` is used as the junction read count.
+- `strand` must be `+` or `-`.
+
+Input parameters:
+- `-m, --manifest` (required): tab-separated manifest file with sample names, bed file paths, and metadata.
+- `-o, --output_prefix` (required): prefix used for all generated output files.
+- `--drim` (optional): also write `{output_prefix}_drimTable.tsv` for DRIMSeq.
+
 ```bash
 $ splicedice quant -m bed_manifest.txt -o output_prefix
 ```
@@ -73,6 +80,7 @@ of files for further processing.
 - `{output_prefix}_allClusters.tsv`
 - `{output_prefix}_inclusionCounts.tsv`
 - `{output_prefix}_junctions.bed`
+- `{output_prefix}_drimTable.tsv` (optional): created only when `--drim` is used.
 
 ### `splicedice compare_sample_sets`
 Compares the differences in splicing across two groups. Requires atleast 3
