@@ -184,7 +184,7 @@ class SPLICEDICE:
     def getJunctionCounts(self):
         """
         Build a matrix of junction counts. This matrix allows any sample to report a read count for 
-        all juntctions in the union of each sample's junctions. Junctions not observed in a sample will have a count of 0.
+        all junctions in the union of each sample's junctions. Junctions not observed in a sample will have a count of 0.
 
         Returns:
             A 2D numpy array of shape (number of junctions across all samples, number of samples) where 
