@@ -60,6 +60,7 @@ For information on the `bed_manifest.txt` format, see [Manifest Format](#manifes
 
 BED input format (per sample file):
 - Tab-delimited BED6 with columns: `chrom`, `start`, `end`, `name`, `score`, `strand`.
+- Genomic coordinates must use 0-based, half-open BED convention (UCSC standard).
 - `score` is used as the junction read count.
 - `strand` must be `+` or `-`.
 
