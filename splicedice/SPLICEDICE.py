@@ -123,7 +123,7 @@ class SPLICEDICE:
     def getAllJunctions(self):
         """
         Build a union of junctions from all samples. 
-        Itterate the input manifest and read each input .bed file.
+        Iterate the input manifest and read each input .bed file.
 
         BED files are expected to have the following column format:
         1. chromosome
