@@ -11,7 +11,7 @@ Expected input bed formats:
 3. right coordinate (0-based half open)
 4. name (not used here)
 5. score (used as read count for quantification)
-6. strand (+ or -)
+6. strand (+, - or .)
 """
 
 import numpy as np
@@ -131,9 +131,7 @@ class SPLICEDICE:
         3. right coordinate (0-based half open)
         4. Any (not used here)
         5. Any (not used here)
-        6. strand (+ or -)
-
-        Only junctions with a valid strand (+ or -) are included.
+        6. strand (+, - or .)
 
         Returns:
             A set of tuples (chromosome, left, right, strand) representing all junctions observed in the input files.
