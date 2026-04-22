@@ -139,7 +139,7 @@ class SPLICEDICE:
             A set of tuples (chromosome, left, right, strand) representing all junctions observed in the input files.
         """
     
-        plusminus = {"+","-"}
+        plusminus = {"+", "-", "."}
         junctions = set()
         # Read all sample files from manifest
         for sample in self.manifest:
