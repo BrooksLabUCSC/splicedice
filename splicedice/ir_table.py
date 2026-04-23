@@ -64,7 +64,7 @@ def getAnnotated(annotation):
         tid,chromosome,strand = transcript
         for i in range(len(exons)-1):
             #annotated[(chromosome,exons[i][1],exons[i+1][0]-1,strand)] = genes[tid]
-            annotated.add(f"{chromosome}:{exons[i][1]}-{exons[i+1][0]-1}:{strand}")
+            annotated.add(f"{chromosome}:{exons[i][1]+1}-{exons[i+1][0]-1}:{strand}")
     return annotated
 
 
