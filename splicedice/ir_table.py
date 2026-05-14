@@ -64,7 +64,7 @@ def getAnnotated(annotation):
         tid,chromosome,strand = transcript
         for i in range(len(exons)-1):
             #annotated[(chromosome,exons[i][1],exons[i+1][0]-1,strand)] = genes[tid]
-            annotated.add(f"{chromosome}:{exons[i][1]}-{exons[i+1][0]-1}:{strand}")
+            annotated.add(f"{chromosome}:{exons[i][1]+1}-{exons[i+1][0]-1}:{strand}")
     return annotated
 
 
@@ -107,7 +107,7 @@ def calculateIR(samples,coverageDirectory,counts,clusters,annotated,args):
             
             for line in percentileCoverage:
                 row = line.strip().split("\t")
-                cluster = f"{row[0]}:{row[1]}-{row[2]}:{row[5]}"
+                cluster = f"{row[0]}:{int(row[1])+1}-{row[2]}:{row[5]}"
                 
                 if not args.allJunctions and cluster not in annotated:
                     continue
