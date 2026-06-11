@@ -105,7 +105,7 @@ def calculateIR(samples,coverageDirectory,counts,clusters,annotated,args):
             
             for line in percentileCoverage:
                 row = line.strip().split("\t")
-                cluster = f"{row[0]}:{row[1]}-{row[2]}:{row[5]}"
+                cluster = f"{row[0]}:{int(row[1])+1}-{row[2]}:{row[5]}"
                 
                 if not args.allJunctions and cluster not in annotated:
                     continue
