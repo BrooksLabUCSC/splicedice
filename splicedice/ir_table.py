@@ -166,7 +166,7 @@ def calculateIRforSample(sample, coverageDirectory, counts, clusters, junctions,
                         try:
                             intronCount += counts[sample][mxCluster]
                         except KeyError:
-                            print("mxCluster", sample, cluster, mxCluster)
+                            pass
                 try:
                     IR[cluster] = median/(median+intronCount)
                 except ZeroDivisionError:
