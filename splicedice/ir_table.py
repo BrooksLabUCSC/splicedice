@@ -93,31 +93,28 @@ def getClusters(filename):
 
 def calculateIR(samples,coverageDirectory,counts,clusters,annotated,args):
     IR = {}
-    coverage = {}
     junctions = set()
     RSD = {}
     for sample in samples:
         filename = os.path.join(coverageDirectory,f"{sample}_intron_coverage.txt")
         
         IR[sample] = {}
-        coverage[sample] = {}
         RSD[sample] = {}
                 
         with open(filename) as percentileCoverage:
             
             for line in percentileCoverage:
                 row = line.strip().split("\t")
-                cluster = f"{row[0]}:{int(row[1])+1}-{row[2]}:{row[5]}"
+                cluster = f"{row[0]}:{row[1]}-{row[2]}:{row[5]}"
                 
                 if not args.allJunctions and cluster not in annotated:
                     continue
                                          
                 junctions.add(cluster)
                 median = float(row[4])
-                coverage[sample][cluster] = row[-1].split(",")
-                covArray = np.array(coverage[sample][cluster]).astype(float)
-                if args.makeRSDtable:
-                    RSD[sample][cluster] = np.std(covArray) / np.mean(covArray)
+                covArray = np.array(row[-1].split(","),dtype=float)
+                mean = np.mean(covArray)
+                RSD[sample][cluster] = np.std(covArray) / mean if mean > 0 else np.nan
                 try:
                     intronCount = counts[sample][cluster]
                     if not args.singleJunctionCalculation:
@@ -131,8 +128,7 @@ def calculateIR(samples,coverageDirectory,counts,clusters,annotated,args):
                     except ZeroDivisionError:
                         IR[sample][cluster] = np.nan
                 except KeyError:
-                    print("cluster",sample,cluster)
-                    break
+                    pass
     
     filtered_junctions = []
     for junction in junctions:
