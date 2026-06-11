@@ -2,8 +2,8 @@
 
 import numpy as np
 import os
-    
-    
+
+
 def add_parser(parser):
     parser.add_argument("-i", "--inclusionCounts",
                         action="store",
@@ -11,7 +11,6 @@ def add_parser(parser):
     parser.add_argument("-c", "--clusters",
                         action="store",
                         help="allClusters.tsv file with mutually exclusive clusters for each junction.")
-
     parser.add_argument("-d", "--coverageDirectory",
                         action="store",
                         help="")
@@ -33,9 +32,11 @@ def add_parser(parser):
     parser.add_argument("-t", "--RSDthreshold",
                         default=1.0, action="store",
                         help="RSD cutoff for inclusion. Default: 1.0.")
-                        
-    
-    
+    parser.add_argument("-n", "--numThreads",
+                        default=1, type=int, action="store",
+                        help="Number of parallel workers for junction collection. Default: 1.")
+
+
 def getAnnotated(annotation):
     genes = {}
     names = {}
@@ -68,15 +69,13 @@ def getAnnotated(annotation):
     return annotated
 
 
-    
-def getInclusionCounts(filename):
-    with open(filename) as inclusionCounts:
-        header = inclusionCounts.readline().strip().split("\t")
-        counts = {sample:{} for sample in header[1:]}
-        for line in inclusionCounts:
-            row = line.rstrip().split("\t")
-            for i, count in enumerate(row[1:]):
-                counts[header[i+1]][row[0]] = float(count)
+def getInclusionCounts(filename, annotated=None):
+    import pandas as pd
+    df = pd.read_csv(filename, sep="\t", index_col=0)
+    if annotated is not None:
+        df = df[df.index.isin(annotated)]
+    counts = df.to_dict(orient="index")
+    counts = {sample: {junction: counts[junction][sample] for junction in counts} for sample in df.columns}
     return counts
 
 
@@ -92,39 +91,56 @@ def getClusters(filename):
     return clusters
 
 
-def getJunctions(samples, coverageDirectory, annotated, args):
+def _getJunctionsForSample(args_tuple):
+    sample, coverageDirectory, annotated, allJunctions = args_tuple
     junctions = set()
-    for sample in samples:
-        filename = os.path.join(coverageDirectory, f"{sample}_intron_coverage.txt")
-        with open(filename) as percentileCoverage:
-            for line in percentileCoverage:
-                row = line.strip().split("\t")
-                cluster = f"{row[0]}:{int(row[1])+1}-{row[2]}:{row[5]}"
-                if not args.allJunctions and cluster not in annotated:
-                    continue
-                junctions.add(cluster)
+    filename = os.path.join(coverageDirectory, f"{sample}_intron_coverage.txt")
+    with open(filename) as percentileCoverage:
+        for line in percentileCoverage:
+            row = line.strip().split("\t")
+            cluster = f"{row[0]}:{int(row[1])+1}-{row[2]}:{row[5]}"
+            if not allJunctions and cluster not in annotated:
+                continue
+            junctions.add(cluster)
     return junctions
+
+
+def getJunctions(samples, coverageDirectory, annotated, args):
+    from multiprocessing import Pool
+    worker_args = [(sample, coverageDirectory, annotated, args.allJunctions) for sample in samples]
+    with Pool(args.numThreads) as pool:
+        results = pool.map(_getJunctionsForSample, worker_args)
+    return set().union(*results)
+
+
+def _filterJunctionsForSample(args_tuple):
+    sample, coverageDirectory, junctions, RSDthreshold = args_tuple
+    filtered = set()
+    filename = os.path.join(coverageDirectory, f"{sample}_intron_coverage.txt")
+    with open(filename) as percentileCoverage:
+        for line in percentileCoverage:
+            row = line.strip().split("\t")
+            cluster = f"{row[0]}:{int(row[1])+1}-{row[2]}:{row[5]}"
+            if cluster not in junctions:
+                continue
+            covArray = np.array(row[-1].split(","), dtype=float)
+            mean = np.mean(covArray)
+            rsd = np.std(covArray) / mean if mean > 0 else np.nan
+            if rsd < float(RSDthreshold):
+                filtered.add(cluster)
+    return filtered
 
 
 def getFilteredJunctions(samples, coverageDirectory, annotated, args):
     import time
+    from multiprocessing import Pool
     t = time.time()
     junctions = getJunctions(samples, coverageDirectory, annotated, args)
     print(f"getJunctions complete: {len(junctions)} junctions. {time.time()-t:.1f}s")
-    filtered_junctions = set()
-    for sample in samples:
-        filename = os.path.join(coverageDirectory, f"{sample}_intron_coverage.txt")
-        with open(filename) as percentileCoverage:
-            for line in percentileCoverage:
-                row = line.strip().split("\t")
-                cluster = f"{row[0]}:{int(row[1])+1}-{row[2]}:{row[5]}"
-                if cluster not in junctions:
-                    continue
-                covArray = np.array(row[-1].split(","), dtype=float)
-                mean = np.mean(covArray)
-                rsd = np.std(covArray) / mean if mean > 0 else np.nan
-                if rsd < float(args.RSDthreshold):
-                    filtered_junctions.add(cluster)
+    worker_args = [(sample, coverageDirectory, junctions, args.RSDthreshold) for sample in samples]
+    with Pool(args.numThreads) as pool:
+        results = pool.map(_filterJunctionsForSample, worker_args)
+    filtered_junctions = set().union(*results)
     print(f"RSD filtering complete: {len(filtered_junctions)} junctions retained. {time.time()-t:.1f}s")
     return filtered_junctions
 
@@ -206,18 +222,20 @@ def run_with(args):
 
     samples = [s.replace("_intron_coverage.txt", "") for s in os.listdir(coverageDirectory) if s.endswith("intron_coverage.txt")]
     print(f"Starting ir_table with {len(samples)} samples")
-    print("Gathering inclusion counts and clusters...")
-    counts = getInclusionCounts(countFile)
-    clusters = None
-    if not args.singleJunctionCalculation:
-        clusters = getClusters(clusterFilename)
-    print(f"Loaded {len(counts)} samples and {len(clusters) if clusters else 0} clusters. {time.time()-start:.1f}s")
 
     if not args.allJunctions:
+        print("Loading annotation...")
         annotated = getAnnotated(annotation)
         print(f"Annotation loaded: {len(annotated)} annotated junctions. {time.time()-start:.1f}s")
     else:
         annotated = None
+
+    print("Gathering inclusion counts and clusters...")
+    counts = getInclusionCounts(countFile, annotated)
+    clusters = None
+    if not args.singleJunctionCalculation:
+        clusters = getClusters(clusterFilename)
+    print(f"Loaded {len(counts)} samples and {len(clusters) if clusters else 0} clusters. {time.time()-start:.1f}s")
 
     print("Collecting junctions across all samples...")
     junctions = getFilteredJunctions(samples, coverageDirectory, annotated, args)
@@ -234,10 +252,10 @@ def run_with(args):
 
     print(f"Done. Total runtime: {time.time()-start:.1f}s")
 
+
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     add_parser(parser)
     args = parser.parse_args()
     run_with(args)
-
