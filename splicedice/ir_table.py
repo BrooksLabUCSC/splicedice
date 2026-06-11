@@ -107,7 +107,10 @@ def getJunctions(samples, coverageDirectory, annotated, args):
 
 
 def getFilteredJunctions(samples, coverageDirectory, annotated, args):
+    import time
+    t = time.time()
     junctions = getJunctions(samples, coverageDirectory, annotated, args)
+    print(f"getJunctions complete: {len(junctions)} junctions. {time.time()-t:.1f}s")
     filtered_junctions = set()
     for sample in samples:
         filename = os.path.join(coverageDirectory, f"{sample}_intron_coverage.txt")
@@ -122,6 +125,7 @@ def getFilteredJunctions(samples, coverageDirectory, annotated, args):
                 rsd = np.std(covArray) / mean if mean > 0 else np.nan
                 if rsd < float(args.RSDthreshold):
                     filtered_junctions.add(cluster)
+    print(f"RSD filtering complete: {len(filtered_junctions)} junctions retained. {time.time()-t:.1f}s")
     return filtered_junctions
 
 
