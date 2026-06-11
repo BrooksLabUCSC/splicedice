@@ -91,71 +91,98 @@ def getClusters(filename):
                 clusters[row[0]] = []
     return clusters
 
-def calculateIR(samples,coverageDirectory,counts,clusters,annotated,args):
-    IR = {}
+
+def getJunctions(samples,coverageDirectory,annotated,args):
     junctions = set()
-    RSD = {}
     for sample in samples:
         filename = os.path.join(coverageDirectory,f"{sample}_intron_coverage.txt")
-        
-        IR[sample] = {}
-        RSD[sample] = {}
-                
         with open(filename) as percentileCoverage:
-            
             for line in percentileCoverage:
                 row = line.strip().split("\t")
                 cluster = f"{row[0]}:{int(row[1])+1}-{row[2]}:{row[5]}"
-                
                 if not args.allJunctions and cluster not in annotated:
                     continue
-                                         
                 junctions.add(cluster)
-                median = float(row[4])
+    return junctions
+
+
+def getFilteredJunctions(samples,coverageDirectory,annotated,args):
+    junctions = getJunctions(samples,coverageDirectory,annotated,args)
+    filtered_junctions = set()
+    for sample in samples:
+        filename = os.path.join(coverageDirectory,f"{sample}_intron_coverage.txt")
+        with open(filename) as percentileCoverage:
+            for line in percentileCoverage:
+                row = line.strip().split("\t")
+                cluster = f"{row[0]}:{int(row[1])+1}-{row[2]}:{row[5]}"
+                if cluster not in junctions:
+                    continue
                 covArray = np.array(row[-1].split(","),dtype=float)
                 mean = np.mean(covArray)
-                RSD[sample][cluster] = np.std(covArray) / mean if mean > 0 else np.nan
+                rsd = np.std(covArray) / mean if mean > 0 else np.nan
+                if rsd < float(args.RSDthreshold):
+                    filtered_junctions.add(cluster)
+    return filtered_junctions
+
+
+def calculateIRforSample(sample,coverageDirectory,counts,clusters,junctions,args):
+    IR = {}
+    RSD = {}
+    filename = os.path.join(coverageDirectory,f"{sample}_intron_coverage.txt")
+    with open(filename) as percentileCoverage:
+        for line in percentileCoverage:
+            row = line.strip().split("\t")
+            cluster = f"{row[0]}:{int(row[1])+1}-{row[2]}:{row[5]}"
+            if cluster not in junctions:
+                continue
+            median = float(row[4])
+            covArray = np.array(row[-1].split(","),dtype=float)
+            mean = np.mean(covArray)
+            RSD[cluster] = np.std(covArray) / mean if mean > 0 else np.nan
+            try:
+                intronCount = counts[sample][cluster]
+                if not args.singleJunctionCalculation:
+                    for mxCluster in clusters[cluster]:
+                        try:
+                            intronCount += counts[sample][mxCluster]
+                        except KeyError:
+                            print("mxCluster",sample,cluster,mxCluster)
                 try:
-                    intronCount = counts[sample][cluster]
-                    if not args.singleJunctionCalculation:
-                        for mxCluster in clusters[cluster]:
-                            try:
-                                intronCount += counts[sample][mxCluster]
-                            except KeyError:
-                                print("mxCluster",sample,cluster,mxCluster)
-                    try:
-                        IR[sample][cluster] = median/(median+intronCount)
-                    except ZeroDivisionError:
-                        IR[sample][cluster] = np.nan
-                except KeyError:
-                    pass
-    
-    filtered_junctions = []
-    for junction in junctions:
-        for sample in samples:
-            if RSD[sample].get(junction, float("inf")) < args.RSDthreshold:
-                filtered_junctions.append(junction)
-                break
-                
-    return filtered_junctions, IR, RSD
+                    IR[cluster] = median/(median+intronCount)
+                except ZeroDivisionError:
+                    IR[cluster] = np.nan
+            except KeyError:
+                pass
+    return IR, RSD
 
 
-def writeIRtable(samples, outputPrefix, junctions, IR):
+def writeIRtable(samples,coverageDirectory,counts,clusters,outputPrefix,junctions,args):
     tab = "\t"
     with open(f"{outputPrefix}_intron_retention.tsv","w") as irTable:
         irTable.write(f"Junction\t{tab.join(samples)}\n")
+        sampleData = {}
+        for sample in samples:
+            print("Writing IR for",sample)
+            IR, RSD = calculateIRforSample(sample,coverageDirectory,counts,clusters,junctions,args)
+            sampleData[sample] = IR
         for junction in sorted(junctions):
-            irValues = [f"{IR[sample][junction]:0.03f}" for sample in samples]
-            irTable.write(f"{junction}\t{tab.join(irValues)}\n")   
-            
-def writeRSDtable(samples, outputPrefix, junctions, RSD):
+            irValues = [f"{sampleData[sample].get(junction, float('nan')):0.03f}" for sample in samples]
+            irTable.write(f"{junction}\t{tab.join(irValues)}\n")
+
+
+def writeRSDtable(samples,coverageDirectory,counts,clusters,outputPrefix,junctions,args):
     tab = "\t"
     with open(f"{outputPrefix}_intron_retention_RSD.tsv","w") as rsdTable:
         header = tab.join([f'{sample}_RSD' for sample in samples])
         rsdTable.write(f"Junction\t{header}\n")
+        sampleData = {}
+        for sample in samples:
+            print("Writing RSD for",sample)
+            IR, RSD = calculateIRforSample(sample,coverageDirectory,counts,clusters,junctions,args)
+            sampleData[sample] = RSD
         for junction in sorted(junctions):
-            rsd = [f"{RSD[s][junction]:0.03f}" for s in samples]
-            rsdTable.write(f"{junction}\t{tab.join(rsd)}\n") 
+            rsd = [f"{sampleData[sample].get(junction, float('nan')):0.03f}" for sample in samples]
+            rsdTable.write(f"{junction}\t{tab.join(rsd)}\n")
 
 
 def run_with(args):
@@ -183,13 +210,14 @@ def run_with(args):
     else:
         clusters = None
         
-    print("Calculating IR values...")
-    junctions, IR, RSD = calculateIR(samples,coverageDirectory,counts,clusters,annotated,args)
+    print("Getting filtered junctions...")
+    junctions = getFilteredJunctions(samples,coverageDirectory,annotated,args)
     print("Done",time.time()-start)
     print("Writing output...")
-    writeIRtable(samples, outputPrefix, junctions, IR)
+    writeIRtable(samples,coverageDirectory,counts,clusters,outputPrefix,junctions,args)
     if args.makeRSDtable:
-        writeRSDtable(samples, outputPrefix, junctions, RSD)
+        writeRSDtable(samples,coverageDirectory,counts,clusters,outputPrefix,junctions,args)
+    print("Done",time.time()-start)
 
 
 if __name__ == "__main__":
@@ -198,3 +226,4 @@ if __name__ == "__main__":
     add_parser(parser)
     args = parser.parse_args()
     run_with(args)
+    
