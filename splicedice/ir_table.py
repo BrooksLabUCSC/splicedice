@@ -158,13 +158,15 @@ def calculateIRforSample(sample,coverageDirectory,counts,clusters,junctions,args
 
 def writeIRtable(samples,coverageDirectory,counts,clusters,outputPrefix,junctions,args):
     tab = "\t"
+    total = len(samples)
     with open(f"{outputPrefix}_intron_retention.tsv","w") as irTable:
         irTable.write(f"Junction\t{tab.join(samples)}\n")
         sampleData = {}
-        for sample in samples:
-            print("Writing IR for",sample)
+        for i,sample in enumerate(samples):
             IR, RSD = calculateIRforSample(sample,coverageDirectory,counts,clusters,junctions,args)
             sampleData[sample] = IR
+            if (i+1) % 50 == 0 or (i+1) == total:
+                print(f"IR calculated for {i+1}/{total} samples")
         for junction in sorted(junctions):
             irValues = [f"{sampleData[sample].get(junction, float('nan')):0.03f}" for sample in samples]
             irTable.write(f"{junction}\t{tab.join(irValues)}\n")
@@ -172,14 +174,16 @@ def writeIRtable(samples,coverageDirectory,counts,clusters,outputPrefix,junction
 
 def writeRSDtable(samples,coverageDirectory,counts,clusters,outputPrefix,junctions,args):
     tab = "\t"
+    total = len(samples)
     with open(f"{outputPrefix}_intron_retention_RSD.tsv","w") as rsdTable:
         header = tab.join([f'{sample}_RSD' for sample in samples])
         rsdTable.write(f"Junction\t{header}\n")
         sampleData = {}
-        for sample in samples:
-            print("Writing RSD for",sample)
+        for i,sample in enumerate(samples):
             IR, RSD = calculateIRforSample(sample,coverageDirectory,counts,clusters,junctions,args)
             sampleData[sample] = RSD
+            if (i+1) % 50 == 0 or (i+1) == total:
+                print(f"RSD calculated for {i+1}/{total} samples")
         for junction in sorted(junctions):
             rsd = [f"{sampleData[sample].get(junction, float('nan')):0.03f}" for sample in samples]
             rsdTable.write(f"{junction}\t{tab.join(rsd)}\n")
@@ -197,28 +201,34 @@ def run_with(args):
     annotation = args.annotation
 
     samples = [s.replace("_intron_coverage.txt","") for s in os.listdir(coverageDirectory) if s.endswith("intron_coverage.txt")]
+    print(f"Starting ir_table with {len(samples)} samples")
     print("Gathering inclusion counts and clusters...")
     counts = getInclusionCounts(countFile)
-    
-    if not args.allJunctions:
-        annotated = getAnnotated(annotation)
-    else:
-        annotated = None
-        
+    clusters = None
     if not args.singleJunctionCalculation:
         clusters = getClusters(clusterFilename)
-    else:
-        clusters = None
-        
-    print("Getting filtered junctions...")
-    junctions = getFilteredJunctions(samples,coverageDirectory,annotated,args)
-    print("Done",time.time()-start)
-    print("Writing output...")
-    writeIRtable(samples,coverageDirectory,counts,clusters,outputPrefix,junctions,args)
-    if args.makeRSDtable:
-        writeRSDtable(samples,coverageDirectory,counts,clusters,outputPrefix,junctions,args)
-    print("Done",time.time()-start)
+    print(f"Loaded {len(counts)} samples and {len(clusters) if clusters else 0} clusters. {time.time()-start:.1f}s")
 
+    if not args.allJunctions:
+        annotated = getAnnotated(annotation)
+        print(f"Annotation loaded: {len(annotated)} annotated junctions. {time.time()-start:.1f}s")
+    else:
+        annotated = None
+
+    print("Collecting junctions across all samples...")
+    junctions = getFilteredJunctions(samples,coverageDirectory,annotated,args)
+    print(f"Junction collection and RSD filtering complete: {len(junctions)} junctions retained. {time.time()-start:.1f}s")
+
+    print("Writing IR table...")
+    writeIRtable(samples,coverageDirectory,counts,clusters,outputPrefix,junctions,args)
+    print(f"IR table written. {time.time()-start:.1f}s")
+
+    if args.makeRSDtable:
+        print("Writing RSD table...")
+        writeRSDtable(samples,coverageDirectory,counts,clusters,outputPrefix,junctions,args)
+        print(f"RSD table written. {time.time()-start:.1f}s")
+
+    print(f"Done. Total runtime: {time.time()-start:.1f}s")
 
 if __name__ == "__main__":
     import argparse
