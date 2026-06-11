@@ -133,7 +133,7 @@ def calculateIR(samples,coverageDirectory,counts,clusters,annotated,args):
     filtered_junctions = []
     for junction in junctions:
         for sample in samples:
-            if RSD[sample][junction] < args.RSDthreshold:
+            if RSD[sample].get(junction, float("inf")) < args.RSDthreshold:
                 filtered_junctions.append(junction)
                 break
                 
