@@ -73,8 +73,6 @@ def getAnnotated(annotation):
 def getInclusionCounts(filename, annotated=None):
     import pandas as pd
     df = pd.read_csv(filename, sep="\t", index_col=0)
-    if annotated is not None:
-        df = df[df.index.isin(annotated)]
     counts = df.to_dict(orient="index")
     counts = {sample: {junction: counts[junction][sample] for junction in counts} for sample in df.columns}
     return counts
@@ -232,7 +230,7 @@ def run_with(args):
         annotated = None
 
     print("Gathering inclusion counts and clusters...")
-    counts = getInclusionCounts(countFile, annotated)
+    counts = getInclusionCounts(countFile)
     clusters = None
     if not args.singleJunctionCalculation:
         clusters = getClusters(clusterFilename)
