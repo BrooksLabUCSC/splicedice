@@ -2,7 +2,7 @@
 """
 Process alignment files (BAMs) to determine coverage at positions along introns, as defined in junction file.
 
-python3 intron_coverage.py -b bam_manifest.tsv  -m output_allPSI.tsv  -j splicedice_junctions.bed
+python3 intron_coverage.py -b bam_manifest.tsv  -j splicedice_junctions.bed
 """
 
 
@@ -20,9 +20,6 @@ def add_parser(parser):
     parser.add_argument('-b', '--bamManifest', 
                         action = 'store', required=True, 
                         help='tab-separated list of bam files for all samples')
-    parser.add_argument('-m', '--splicediceTable', 
-                        action = 'store', required=True, 
-                        help='splicedice allPSI.tsv output from splicedice')
     parser.add_argument('-j', '--junctionFile', 
                         action = 'store', required=True, 
                         help='splicedice junction.bed output from splicedice')
@@ -38,12 +35,11 @@ def add_parser(parser):
                         help='directory for outputting intron coverage count files')
 
 class IntronCoverage():
-    def __init__(self, manifest,splicedice,junctionFile,binSize,numThreads,outputDir):
+    def __init__(self, manifest,junctionFile,binSize,numThreads,outputDir):
         """
         Instantiate object attributes
         """
         self.manifest = manifest
-        self.splicedice = splicedice
         self.junctionFilename = junctionFile
         self.binSize = binSize
         self.numThreads = numThreads
@@ -249,7 +245,6 @@ def run_with(args):
     start_time = time.time()
 
     manifest = args.bamManifest
-    splicedice = args.splicediceTable
     junctionFile = args.junctionFile
     binSize = args.binSize
     numThreads = args.numThreads
@@ -258,7 +253,7 @@ def run_with(args):
     if not os.path.isdir(outputDir):
         os.mkdir(outputDir)
 
-    intronCoverage = IntronCoverage(manifest,splicedice,junctionFile,binSize,numThreads,outputDir)
+    intronCoverage = IntronCoverage(manifest,junctionFile,binSize,numThreads,outputDir)
     intronCoverage.parseManifest()
     intronCoverage.getIntronPercentiles()
     intronCoverage.getCoveragePool()
