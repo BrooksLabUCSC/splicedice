@@ -210,7 +210,12 @@ class SPLICEDICE:
             exclusions = np.zeros(len(self.manifest))
             for excluded in self.clusters[junction]:
                 exclusions += self.counts[self.junctionIndex[excluded],:]
-            psi[self.junctionIndex[junction],:] = inclusions / (inclusions + exclusions)        
+            denom = inclusions + exclusions
+            psi[self.junctionIndex[junction],:] = np.where(
+                denom > 0,
+                np.divide(inclusions, denom, where=denom > 0),
+                np.nan
+            )
         return psi
 
     def junctionString(self, junction, one_based=False):
