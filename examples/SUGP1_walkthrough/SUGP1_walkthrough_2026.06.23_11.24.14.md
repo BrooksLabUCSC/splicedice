@@ -278,3 +278,71 @@ date
 
 ```
 
+```bash
+Tue Jun 23 21:37:33 UTC 2026
+Starting ir_table with 6 samples
+Loading annotation...
+Annotation loaded: 528735 annotated junctions. 60.2s
+Gathering inclusion counts and clusters...
+Loaded 6 samples and 333069 clusters. 69.2s
+Collecting junctions across all samples...
+getJunctions complete: 210470 junctions. 5.3s
+RSD filtering complete: 96399 junctions retained. 23.0s
+Junction collection and RSD filtering complete: 96399 junctions retained. 92.3s
+Writing IR table...
+IR calculated for 6/6 samples
+IR table written. 149.7s
+Done. Total runtime: 149.7s
+
+real    2m35.469s
+user    0m0.057s
+sys     0m0.058s
+Tue Jun 23 21:40:08 UTC 2026
+```
+
+# Compare to previous output
+
+# 
+
+```bash
+prev_dir=/mnt/splicedice_ir_example_archives/2026.05.28_21.25.54/analysis/
+current_dir=${this_base_dir}/analysis
+for i in `ls $current_dir`; do echo $i; diff $current_dir/$i $prev_dir/${i}; done
+```
+
+```bash
+ubuntu@hbeale-mesa:/mnt/sd/SUGP1_walkthrough_bc373ae_2026.06.23_11.14.13/git_code/splicedice$ prev_dir=/mnt/splicedice_ir_example_archives/2026.05.28_21.25.54/analysis/
+current_dir=${this_base_dir}/analysis
+for i in `ls $current_dir`; do echo $i; diff $current_dir/$i $prev_dir/${i}; done
+_allClusters.tsv
+_allPS.tsv
+_inclusionCounts.tsv
+_intron_retention.tsv
+_junctions.bed
+ubuntu@hbeale-mesa:/mnt/sd/SUGP1_walkthrough_bc373ae_2026.06.23_11.14.13/git_code/splicedice$
+```
+
+make sure my code works:
+
+```bash
+echo 1 > $prev_dir/not_matching
+echo 2 > $current_dir/not_matching
+for i in `ls $current_dir`; do echo $i; diff $current_dir/$i $prev_dir/${i}; done
+```
+
+```bash
+ubuntu@hbeale-mesa:/mnt/sd/SUGP1_walkthrough_bc373ae_2026.06.23_11.14.13/git_code/splicedice$ for i in `ls $current_dir`; do echo $i; diff $current_dir/$i $prev_dir/${i}; done
+_allClusters.tsv
+_allPS.tsv
+_inclusionCounts.tsv
+_intron_retention.tsv
+_junctions.bed
+not_matching
+1c1
+< 2
+---
+> 1
+ubuntu@hbeale-mesa:/mnt/sd/SUGP1_walkthrough_bc373ae_2026.06.23_11.14.13/git_code/splicedice$ 
+
+```
+
