@@ -20,7 +20,7 @@ ARG SHA1_splicedice="bc373ae02c20ce61412b2f9ba3229844b684e2dd"
 
 ARG CACHE_BUST=1
 
-RUN git clone --depth 1 \
+RUN git clone --depth 2 \
       https://github.com/BrooksLabUCSC/splicedice.git splicedice \
  && cd splicedice \
  && git reset --hard $SHA1_splicedice \
