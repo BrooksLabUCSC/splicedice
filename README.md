@@ -1,167 +1,176 @@
 # SpliceDICE
+
 Splice Divergent Interval Co-Exclusion (Splice DICE) is a tool for detecting and quantifying splicing events
 by mutually exclusive junctions. This tool is currently in development and
 user discretion is advised.
 
-## Table of Contents
-  * [Dependencies](#dependencies)
-  * [Installation](#installation)
-  * [Usage](#usage)
-    + [Aligned RNA sequencing reads](#aligned-rna-sequencing-reads)
-    + [`splicedice quant`](#splicedice-quant)
-      - [Output files](#output-files)
-    + [`splicedice compare_sample_sets`](#splicedice-compare_sample_sets)
-    + [`splicedice pairwise`](#splicedice-pairwise)
-    + [Intron Retention](#intron-retention)
+![Splicedice workflow overview](images/workflow_overview.png)
 
-  * [Manifest Format](#manifest-format)
-  * [Analyzing DRIMSeq output](#analyzing-drimseq-output)
-  * [Contributing](#contributing)
-  * [License](#license)
+## Table of Contents
+
+- [Dependencies](#dependencies)
+- [Installation](#installation)
+- [Usage](#usage)
+  - [splicedice quant](#splicedice-quant)
+    - [Output files](#output-files)
+  - [Intron Retention](#intron-retention)
+    - [splicedice intron_coverage](#splicedice-intron_coverage)
+    - [splicedice ir_table](#splicedice-ir_table)
+- [Manifest Format](#manifest-format)
+  - [BED Manifest](#bed-manifest) (used by `quant`)
+  - [BAM Manifest](#bam-manifest) (used by `intron_coverage`)
+- [Contributing](#contributing)
+- [License](#license)
 
 ## Dependencies
-- python=3.7+
-- numpy
-- samtools
-- pysam
-- scipy
-- ...
+
+- Python 3.8+
+- numpy==1.24.4
+- pysam==0.23.3
+- pandas==2.0.3
 
 ## Installation
 
-Use `git` to clone the package and install with the package manager [pip](https://pip.pypa.io/en/stable/).
+Use git to clone the package and install with the package manager pip.
 
-```bash
-$ git clone https://github.com/BrooksLabUCSC/splicedice.git
-$ cd splicedice/
-$ pip install --user .
-```
+    $ git clone https://github.com/BrooksLabUCSC/splicedice.git
+    $ cd splicedice/
+    $ pip install --user .
+
 ### Development
+
 If you are working on developing SpliceDICE it will likely be useful to install it in editable mode.
-```bash
-$ pip install --user -e .
-```
+
+    $ pip install --user -e .
 
 ## Usage
 
 SpliceDICE uses splice junction counts derived from aligned RNA sequencing reads to calculate a Percent-Spliced (PS) value for each junction.
 
-**Suggested tools for generating junction counts:**
-- [intronProspector](https://github.com/diekhans/intronProspector)
+Suggested tool for generating junction counts:
 
-### Aligned RNA sequencing reads
-SpliceDICE requires RNA sequencing reads that are aligned to a reference genome. 
+- intronProspector
 
-## Manifest files
+![Step 1 - intron_prospector](images/step_1_intron_prospector.png)
 
-### `splicedice quant`
-Processes junction count files (bed6 files) to calculate Percent-Spliced (PS) value for every splice junction in every sample in the manifest.
-For information on the `bed_manifest.txt` format, see [Manifest Format](#manifest-format).
+### splicedice quant
+
+Processes junction count files (BED6 files) to calculate a Percent-Spliced (PS) value for every splice junction in every sample in the manifest. Requires a [BED manifest](#bed-manifest).
 
 BED input format (per sample file):
-- Tab-delimited BED6 with columns: `chrom`, `start`, `end`, `name`, `score`, `strand`.
+
+- Tab-delimited BED6 with columns: chrom, start, end, name, score, strand.
 - Genomic coordinates must use 0-based, half-open BED convention (UCSC standard).
-- `score` is used as the junction read count.
-- `strand` must be `+` or `-`.
+- score is used as the junction read count.
+- strand must be + or -.
 
 Input parameters:
-- `-m, --manifest` (required): tab-separated manifest file with sample names, bed file paths, and metadata.
-- `-o, --output_prefix` (required): prefix used for all generated output files.
-- `--drim` (optional): also write `{output_prefix}_drimTable.tsv` for DRIMSeq.
 
-```bash
-$ splicedice quant -m bed_manifest.txt -o output_prefix
+- `-m, --manifest` (required): BED manifest file with sample names and bed file paths.
+- `-o, --output_prefix` (required): prefix used for all generated output files.
+
 ```
+$ splicedice quant -m bed_manifest.tsv -o output_prefix
+```
+
+![Step 2 - quant](images/step_2_quant.png)
 
 #### Output files
-Based on the `-o/--output_prefix` parameter, `splicedice quant` will output a number
-of files for further processing.
-- `{output_prefix}_allPS.tsv`: A tab-separated table of PS values, where each column is a sample, and each row is a splice junction.
-- `{output_prefix}_allClusters.tsv`
-- `{output_prefix}_inclusionCounts.tsv`
-- `{output_prefix}_junctions.bed`
-- `{output_prefix}_drimTable.tsv` (optional): created only when `--drim` is used.
 
-### `splicedice compare_sample_sets`
-Compares the differences in splicing across two groups. Requires atleast 3
-samples per condition, otherwise it will fail. If you have less than 3 samples
-per condition, use `splicedice parwise`.
-```bash
-$ splicedice compare_sample_sets --psiSPLICEDICE my_output_allPSI.npz -m1 ctrl_manifest.txt -m2 mut_manifest.txt
-```
-This module will take two manifest files, that represents the two groups you
-wish to compare. It also takes the allPS.tsv file that was previously outputted by
-`splicedice quant`.
-
-### `splicedice pairwise`
-Example command:
-
-```bash
-$ splicedice pairwise --inclusionSPLICEDICE my_output_inclusionCounts.npz -c my_output_all_clusters2.tsv >pairwise_output.txt
-```
-
-This command performs a pairwise comparison of the junction usage for each
-sample against each other. `pairwise_output.txt`, from the command above, will
-output the p-value from running a Fisher's exact test, where the contingency
-matrix is inclusion and exclusion read counts for each pair of samples for a
-given junction. This command is recommend for datasets with less than three
-samples per group where `splicedice compare_sample_sets` could not be used.
-
-todo example output and explanation
+- `{output_prefix}_allPS.tsv`: tab-separated table of PS values, where each column is a sample and each row is a splice junction.
+- `{output_prefix}_allClusters.tsv`: tab-separated table of mutually exclusive junction clusters.
+- `{output_prefix}_inclusionCounts.tsv`: raw junction read counts per sample.
+- `{output_prefix}_junctions.bed`: BED file of all junctions observed across samples.
 
 ### Intron Retention
-The percent-spliced value does not quantify intron retention, so separate subprograms gives a table of IR values, in the same format as the PS table. The first subprogram, `splicedice intron_coverage`, measures the coverage across previously identified splice junctions, and outputs a table for each sample. The second subprogram, `splicedice ir_table`, takes those coverage values and calculates the IR value for each junction in each sample, outputting the final IR table.
 
-```bash
-$ splicedice intron_coverage -b bam_manifest.tsv -m project_allPS.tsv -j project_junctions.bed -n 4 -o coverage_output_dir
-$ splicedice ir_table -i project_inclusionCounts.tsv -c project_allClusters.tsv -d coverage_output_dir -o project_output_prefix
+The percent-spliced value does not quantify intron retention. Two subprograms together produce an IR value table in the same format as the PS table.
+
+#### splicedice intron_coverage
+
+Measures coverage across previously identified splice junctions for each sample, producing a per-sample coverage file. Requires a [BAM manifest](#bam-manifest).
+
+Input parameters:
+
+- `-b, --bamManifest` (required): BAM manifest file with sample names and BAM file paths.
+- `-j, --junctionFile` (required): junction BED file output from `splicedice quant`.
+- `-n, --numThreads` (optional): number of BAM-parsing threads (default: 1).
+- `-o, --outputDir` (required): directory for per-sample intron coverage output files.
+
+```
+$ splicedice intron_coverage \
+    -b bam_manifest.tsv \
+    -j output_prefix_junctions.bed \
+    -n 4 \
+    -o coverage_output_dir
 ```
 
+![Step 3 - intron_coverage](images/step_3_intron_coverage.png)
+
+#### splicedice ir_table
+
+Takes per-sample coverage values from `intron_coverage` and calculates the IR value for each junction in each sample, outputting the final IR table.
+
+Input parameters:
+
+- `-i, --inclusionCounts` (required): `{output_prefix}_inclusionCounts.tsv` from `splicedice quant`.
+- `-c, --clusters` (required): `{output_prefix}_allClusters.tsv` from `splicedice quant`.
+- `-d, --coverageDirectory` (required): directory of per-sample coverage files from `splicedice intron_coverage`.
+- `-o, --outputPrefix` (required): prefix for output files.
+- `-a, --annotation` (required unless `-j`): GTF file with gene annotation.
+- `-j, --allJunctions` (optional): output IR values for all junctions; default is annotated junctions only.
+- `-n, --numThreads` (optional): number of parallel workers (default: 1).
+- `-r, --makeRSDtable` (optional): also write a table of relative standard deviations in coverage.
+- `-t, --RSDthreshold` (optional): RSD cutoff for junction inclusion (default: 1.0).
+- `-s, --singleJunctionCalculation` (optional): calculate IR using individual junction counts rather than the full cluster count.
+
+```
+$ splicedice ir_table \
+    -i output_prefix_inclusionCounts.tsv \
+    -c output_prefix_allClusters.tsv \
+    -d coverage_output_dir \
+    -n 4 \
+    -o project_output_prefix
+```
+
+![Step 4 - ir_table](images/step_4_intron_retention_table.png)
 
 ## Manifest Format
-The manifest is a tab-delimitted file used by `splicedice` provides information about
-the samples and related files.
-```bash
-$ cat manifest.txt
-sample1 /path/to/sample1/sj.tab.bed lung control
-sample2 /path/to/sample2/sj.tab.bed lung control
-sample3 /path/to/sample3/sj.tab.bed lung mutant
-sample4 /path/to/sample4/sj.tab.bed lung mutant
+
+Manifests are tab-delimited files with one sample per line. The first column is the sample identifier, the second is the absolute path to the relevant file, and the third is an optional metadata label (e.g. condition) for your own reference — it is not used by SpliceDICE.
+
+### BED Manifest
+
+Used by `splicedice quant`. The second column is the path to the BED6 junction file for that sample.
+
 ```
-- The first column is the sample identifier.
-- The second column is the absolute path to the bed file version of the star junction output file produced by `splicedice star_junc_to_bed`
-- The third column is additional metadata for the type of sample it is. This column is for convience for your own analyses and not used by `splicedice`.
-- The fourth column is the condition. This is used to decide how the samples are
-grouped and the statistical analysis uses the different groups to compare.
-
-An example of the manifest format can be found [here](data/example_manifest.txt).
-
-## Analyzing DRIMSeq output
-`splicedice quant` can provide its output in a format for use with with the
-alternative splicing quantifier tool DRIMSeq in the R programming language.
-SpliceDICE provides a utility script [run-drim-seq.R](scripts/run-drim-seq.R). This
-script depends on:
-- R todo double check dependencies
-- DRIMSeq
-- ggplot2
-- optparse
-
-An example command to run our DRIMSeq script is shown below
-```
-$ Rscript run-drim-seq.R -m bed_manifest.txt -d drim_table.tsv -o drim_output -t 12
+SRR12801019	/path/to/intron_beds/SRR12801019.bed	control
+SRR12801020	/path/to/intron_beds/SRR12801020.bed	SUGP1_kd
+SRR12801023	/path/to/intron_beds/SRR12801023.bed	control
+SRR12801024	/path/to/intron_beds/SRR12801024.bed	SUGP1_kd
+SRR12801027	/path/to/intron_beds/SRR12801027.bed	control
+SRR12801028	/path/to/intron_beds/SRR12801028.bed	SUGP1_kd
 ```
 
-TODO explain various plots and data output
+### BAM Manifest
 
-This script will automatically output a number of plots and an output table for
-further analyzing splicing data. The `-t` parameter sets the number of threads
-to be used, and we recommend setting it as high as you can because DRIMSeq is a
-cpu-intensive tool.
+Used by `splicedice intron_coverage`. The second column is the path to the BAM file for that sample.
+
+```
+SRR12801019	/path/to/bams/SRR12801019.bam	control
+SRR12801020	/path/to/bams/SRR12801020.bam	SUGP1_kd
+SRR12801023	/path/to/bams/SRR12801023.bam	control
+SRR12801024	/path/to/bams/SRR12801024.bam	SUGP1_kd
+SRR12801027	/path/to/bams/SRR12801027.bam	control
+SRR12801028	/path/to/bams/SRR12801028.bam	SUGP1_kd
+```
 
 ## Contributing
+
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
 
-Please make sure to update tests as appropriate.
+Please include tests as appropriate.
 
 ## License
-[BSD-3](LICENSE)
+
+BSD-3
