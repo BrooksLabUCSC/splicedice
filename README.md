@@ -46,11 +46,12 @@ $ pip install --user -e .
 
 SpliceDICE uses splice junction counts derived from aligned RNA sequencing reads to calculate a Percent-Spliced (PS) value for each junction.
 
-**Suggested tools for generating junction counts:**
+**Suggested tool for generating junction counts:**
+
 - [intronProspector](https://github.com/diekhans/intronProspector)
 
 ### Aligned RNA sequencing reads
-SpliceDICE requires RNA sequencing reads that are aligned to a reference genome. 
+Calculating intron coverage with SpliceDICE requires RNA sequencing reads that are aligned to a reference genome. 
 
 ## Manifest files
 
@@ -82,39 +83,12 @@ of files for further processing.
 - `{output_prefix}_junctions.bed`
 - `{output_prefix}_drimTable.tsv` (optional): created only when `--drim` is used.
 
-### `splicedice compare_sample_sets`
-Compares the differences in splicing across two groups. Requires atleast 3
-samples per condition, otherwise it will fail. If you have less than 3 samples
-per condition, use `splicedice parwise`.
-```bash
-$ splicedice compare_sample_sets --psiSPLICEDICE my_output_allPSI.npz -m1 ctrl_manifest.txt -m2 mut_manifest.txt
-```
-This module will take two manifest files, that represents the two groups you
-wish to compare. It also takes the allPS.tsv file that was previously outputted by
-`splicedice quant`.
-
-### `splicedice pairwise`
-Example command:
-
-```bash
-$ splicedice pairwise --inclusionSPLICEDICE my_output_inclusionCounts.npz -c my_output_all_clusters2.tsv >pairwise_output.txt
-```
-
-This command performs a pairwise comparison of the junction usage for each
-sample against each other. `pairwise_output.txt`, from the command above, will
-output the p-value from running a Fisher's exact test, where the contingency
-matrix is inclusion and exclusion read counts for each pair of samples for a
-given junction. This command is recommend for datasets with less than three
-samples per group where `splicedice compare_sample_sets` could not be used.
-
-todo example output and explanation
-
 ### Intron Retention
 The percent-spliced value does not quantify intron retention, so separate subprograms gives a table of IR values, in the same format as the PS table. The first subprogram, `splicedice intron_coverage`, measures the coverage across previously identified splice junctions, and outputs a table for each sample. The second subprogram, `splicedice ir_table`, takes those coverage values and calculates the IR value for each junction in each sample, outputting the final IR table.
 
 ```bash
 $ splicedice intron_coverage -b bam_manifest.tsv -m project_allPS.tsv -j project_junctions.bed -n 4 -o coverage_output_dir
-$ splicedice ir_table -i project_inclusionCounts.tsv -c project_allClusters.tsv -d coverage_output_dir -o project_output_prefix
+$ splicedice ir_table -i project_inclusionCounts.tsv -c project_allClusters.tsv -d coverage_output_dir -n 4 -o project_output_prefix
 ```
 
 
@@ -136,32 +110,10 @@ grouped and the statistical analysis uses the different groups to compare.
 
 An example of the manifest format can be found [here](data/example_manifest.txt).
 
-## Analyzing DRIMSeq output
-`splicedice quant` can provide its output in a format for use with with the
-alternative splicing quantifier tool DRIMSeq in the R programming language.
-SpliceDICE provides a utility script [run-drim-seq.R](scripts/run-drim-seq.R). This
-script depends on:
-- R todo double check dependencies
-- DRIMSeq
-- ggplot2
-- optparse
-
-An example command to run our DRIMSeq script is shown below
-```
-$ Rscript run-drim-seq.R -m bed_manifest.txt -d drim_table.tsv -o drim_output -t 12
-```
-
-TODO explain various plots and data output
-
-This script will automatically output a number of plots and an output table for
-further analyzing splicing data. The `-t` parameter sets the number of threads
-to be used, and we recommend setting it as high as you can because DRIMSeq is a
-cpu-intensive tool.
-
 ## Contributing
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
 
-Please make sure to update tests as appropriate.
+Please include tests as appropriate.
 
 ## License
 [BSD-3](LICENSE)
