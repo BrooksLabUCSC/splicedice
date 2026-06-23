@@ -72,8 +72,6 @@ cat $primary_manifest | cut -f1,3,4 > $bed_manifest
 
 (note; if your bams aren't already in the location in the manfest, link to them, e.g. `for i in `ls /mnt/output/star_2.7.11b_2026.04.16/`; do echo $i; ln -s /mnt/output/star_2.7.11b_2026.04.16/${i}/${i}.bam /mnt/sd/SUGP1_walkthrough_bc373ae_2026.06.23_11.14.13//bams/; done`)
 
-(note; if your bams aren't already in the location in the manfest, link to them, e.g. `for i in `ls /mnt/output/star_2.7.11b_2026.04.16/`; do echo $i; ln -s /mnt/output/star_2.7.11b_2026.04.16/${i}/${i}.bam /mnt/sd/SUGP1_walkthrough_bc373ae_2026.06.23_11.14.13//bams/; done`)
-
 
 
 ## view manifest contents
@@ -229,6 +227,32 @@ date
 Tue Jun 23 20:49:56 UTC 2026
 getting paths for bam files
 creating junction percentiles
+SRR12801019 starting 5.3634960651397705
+SRR12801019 collected 628.1782286167145
+SRR12801019 counted 1267.9633173942566
+SRR12801019 done 1282.1344695091248
+SRR12801024 starting 7.4829628467559814
+SRR12801024 collected 795.3424100875854
+SRR12801024 counted 1460.5932395458221
+SRR12801024 done 1474.2689065933228
+SRR12801023 starting 6.865115642547607
+SRR12801023 collected 690.1928341388702
+SRR12801023 counted 1351.9379482269287
+SRR12801023 done 1365.303383588791
+SRR12801028 starting 9.051880359649658
+SRR12801028 collected 846.2235708236694
+SRR12801028 counted 1570.6379480361938
+SRR12801028 done 1584.6428875923157
+SRR12801027 starting 8.246123313903809
+SRR12801027 collected 808.1194612979889
+SRR12801027 counted 1570.9109573364258
+SRR12801027 done 1584.7905428409576
+Your runtime was 1608.330510854721 seconds.
+
+real    26m52.394s
+user    0m0.133s
+sys     0m0.055s
+Tue Jun 23 21:16:48 UTC 2026
 
 ```
 
