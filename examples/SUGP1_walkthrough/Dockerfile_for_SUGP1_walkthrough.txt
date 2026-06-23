@@ -1,0 +1,31 @@
+FROM python:3.8-slim
+
+WORKDIR /opt
+
+RUN apt-get update && apt-get install -y \
+    git build-essential pkg-config libhts-dev samtools=1.16.1-1 \
+    less curl nano \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN git clone --depth 2 \
+      https://github.com/diekhans/intronProspector.git \
+ && cd intronProspector \
+ && ./configure \
+ && make -j$(nproc) \
+ && make install \
+ && cd /opt \
+ && rm -rf intronProspector
+
+ARG branch_splicedice="SUGP1_walkthrough"
+
+ARG CACHE_BUST=1
+
+RUN git clone --depth 1 --branch $branch_splicedice \
+      https://github.com/BrooksLabUCSC/splicedice.git splicedice \
+ && cd splicedice \
+ && pip install --no-cache-dir . \
+ && cd /opt
+
+RUN apt-get purge -y git build-essential pkg-config \
+    && apt-get autoremove -y \
+    && rm -rf /var/lib/apt/lists/*
