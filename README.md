@@ -20,12 +20,10 @@ user discretion is advised.
   * [License](#license)
 
 ## Dependencies
-- python=3.7+
-- numpy
-- samtools
-- pysam
-- scipy
-- ...
+- Python 3.8+
+- numpy==1.24.4
+- pysam==0.23.3
+- pandas==2.0.3
 
 ## Installation
 
