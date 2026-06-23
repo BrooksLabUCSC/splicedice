@@ -15,16 +15,9 @@ Docker
 ## define location
 
 ```bash
-<<<<<<< Updated upstream
-this_commit=
-this_description=SUGP1_walkthrough
-this_datestamp=2026.06.23_11.14.13
-this_branch=SUGP1_walkthrough
-=======
 this_commit=bc373ae
 this_description=SUGP1_walkthrough
 this_datestamp=2026.06.23_11.14.13
->>>>>>> Stashed changes
 this_dockerfile=Dockerfile_for_${this_description}.txt
 ```
 
@@ -35,28 +28,17 @@ mkdir -p ${this_base_dir}/git_code/ ${this_base_dir}/analysis/ ${this_base_dir}/
 
 ```
 
-<<<<<<< Updated upstream
-git clone --depth 2  --branch Remove-untested-code  \
-      https://github.com/BrooksLabUCSC/splicedice.git splicedice_Remove-untested-code
-=======
-
->>>>>>> Stashed changes
 
 ## get code
 
 ```bash
 cd ${this_base_dir}/git_code/
-<<<<<<< Updated upstream
-git clone --depth 2  --branch $this_branch \
-https://github.com/BrooksLabUCSC/splicedice.git 
-=======
 git clone --depth 5 \
 https://github.com/BrooksLabUCSC/splicedice.git 
 cd splicedice
 SHA1_splicedice="bc373ae02c20ce61412b2f9ba3229844b684e2dd"
 git reset --hard $SHA1_splicedice
 
->>>>>>> Stashed changes
 ```
 
 ## build docker
@@ -75,25 +57,10 @@ aside: ~/alert_msg.sh is a personal convenience script that notifies me when the
 ## create manifests for this run
 
 ```bash
-<<<<<<< Updated upstream
-=======
-
->>>>>>> Stashed changes
 primary_manifest=${code_base}/primary_manifest.tsv
 bed_manifest=${primary_manifest/primary/bed}
 bam_manifest=${primary_manifest/primary/bam}
 
-<<<<<<< Updated upstream
-cat $primary_manifest | \
-sed "s/replace_with_bam_base/$this_base_dir/" | \
-cut -f1,2,4 > $bam_manifest
-
-cat $primary_manifest | \
-sed "s/replace_with_bed_base/$this_base_dir/"  | \
-cut -f1,3,4 > $bed_manifest
-```
-
-=======
 cat ${code_base}/generic_primary_manifest.tsv | \
 sed "s|replace_with_bam_base|$this_base_dir|" | \
 sed "s|replace_with_bed_base|$this_base_dir|" \
@@ -101,12 +68,12 @@ sed "s|replace_with_bed_base|$this_base_dir|" \
 
 cat $primary_manifest | cut -f1,2,4 > $bam_manifest
 cat $primary_manifest | cut -f1,3,4 > $bed_manifest
-
 ```
 
 (note; if your bams aren't already in the location in the manfest, link to them, e.g. `for i in `ls /mnt/output/star_2.7.11b_2026.04.16/`; do echo $i; ln -s /mnt/output/star_2.7.11b_2026.04.16/${i}/${i}.bam /mnt/sd/SUGP1_walkthrough_bc373ae_2026.06.23_11.14.13//bams/; done`)
 
->>>>>>> Stashed changes
+(note; if your bams aren't already in the location in the manfest, link to them, e.g. `for i in `ls /mnt/output/star_2.7.11b_2026.04.16/`; do echo $i; ln -s /mnt/output/star_2.7.11b_2026.04.16/${i}/${i}.bam /mnt/sd/SUGP1_walkthrough_bc373ae_2026.06.23_11.14.13//bams/; done`)
+
 
 
 ## view manifest contents
@@ -118,22 +85,12 @@ cat $bed_manifest
 ```
 
 ```bash
-<<<<<<< Updated upstream
-SRR12801019     /mnt/data/intron_prospector_runs/2026-05-05_20-28-22/SRR12801019.bed    control
-SRR12801020     /mnt/data/intron_prospector_runs/2026-05-05_20-28-22/SRR12801020.bed    SUGP1_kd
-SRR12801023     /mnt/data/intron_prospector_runs/2026-05-05_20-28-22/SRR12801023.bed    control
-SRR12801024     /mnt/data/intron_prospector_runs/2026-05-05_20-28-22/SRR12801024.bed    SUGP1_kd
-SRR12801027     /mnt/data/intron_prospector_runs/2026-05-05_20-28-22/SRR12801027.bed    control
-SRR12801028     /mnt/data/intron_prospector_runs/2026-05-05_20-28-22/SRR12801028.bed    SUGP1_kd
-=======
 SRR12801019     /mnt/sd/SUGP1_walkthrough_bc373ae_2026.06.23_11.14.13//intron_beds/SRR12801019.bed      control
 SRR12801020     /mnt/sd/SUGP1_walkthrough_bc373ae_2026.06.23_11.14.13//intron_beds/SRR12801020.bed      SUGP1_kd
 SRR12801023     /mnt/sd/SUGP1_walkthrough_bc373ae_2026.06.23_11.14.13//intron_beds/SRR12801023.bed      control
 SRR12801024     /mnt/sd/SUGP1_walkthrough_bc373ae_2026.06.23_11.14.13//intron_beds/SRR12801024.bed      SUGP1_kd
 SRR12801027     /mnt/sd/SUGP1_walkthrough_bc373ae_2026.06.23_11.14.13//intron_beds/SRR12801027.bed      control
 SRR12801028     /mnt/sd/SUGP1_walkthrough_bc373ae_2026.06.23_11.14.13//intron_beds/SRR12801028.bed      SUGP1_kd
->>>>>>> Stashed changes
-
 ```
 
 
@@ -145,22 +102,13 @@ cat $bam_manifest
 ```
 
 ```bash
-<<<<<<< Updated upstream
-SRR12801019     /mnt/output/star_2.7.11b_2026.04.16/SRR12801019/SRR12801019.bam control control
-SRR12801020     /mnt/output/star_2.7.11b_2026.04.16/SRR12801020/SRR12801020.bam SUGP1_kd        SUGP1_kd
-SRR12801023     /mnt/output/star_2.7.11b_2026.04.16/SRR12801023/SRR12801023.bam control control
-SRR12801024     /mnt/output/star_2.7.11b_2026.04.16/SRR12801024/SRR12801024.bam SUGP1_kd        SUGP1_kd
-SRR12801027     /mnt/output/star_2.7.11b_2026.04.16/SRR12801027/SRR12801027.bam control control
-SRR12801028     /mnt/output/star_2.7.11b_2026.04.16/SRR12801028/SRR12801028.bam SUGP1_kd        SUGP1_kd
 
-=======
 SRR12801019     /mnt/sd/SUGP1_walkthrough_bc373ae_2026.06.23_11.14.13//bams/SRR12801019.bam     control
 SRR12801020     /mnt/sd/SUGP1_walkthrough_bc373ae_2026.06.23_11.14.13//bams/SRR12801020.bam     SUGP1_kd
 SRR12801023     /mnt/sd/SUGP1_walkthrough_bc373ae_2026.06.23_11.14.13//bams/SRR12801023.bam     control
 SRR12801024     /mnt/sd/SUGP1_walkthrough_bc373ae_2026.06.23_11.14.13//bams/SRR12801024.bam     SUGP1_kd
 SRR12801027     /mnt/sd/SUGP1_walkthrough_bc373ae_2026.06.23_11.14.13//bams/SRR12801027.bam     control
 SRR12801028     /mnt/sd/SUGP1_walkthrough_bc373ae_2026.06.23_11.14.13//bams/SRR12801028.bam     SUGP1_kd
->>>>>>> Stashed changes
 ```
 
 
@@ -173,15 +121,10 @@ SRR12801028     /mnt/sd/SUGP1_walkthrough_bc373ae_2026.06.23_11.14.13//bams/SRR1
 
 genome=/mnt/ref/GRCh38.primary_assembly.genome.fa
 
-<<<<<<< Updated upstream
-cat $primary_manifest | while read id bam bed phenotype; 
-do
-=======
 date
 cat $primary_manifest | while read id bam bed phenotype; 
 do
 echo $id
->>>>>>> Stashed changes
 
 docker run --rm \
 -v /mnt/:/mnt \
@@ -192,16 +135,11 @@ intron-prospector \
 $bam
 
 done
-<<<<<<< Updated upstream
-=======
 date
->>>>>>> Stashed changes
 bash ~/alert_msg.sh intron_prospector_complete 
 
 ```
 
-<<<<<<< Updated upstream
-=======
 std out
 
 ```bash
@@ -219,7 +157,6 @@ Tue Jun 23 20:28:59 UTC 2026
 
 
 
->>>>>>> Stashed changes
 # Identify and quantify splice junctions
 
 ```bash
@@ -234,8 +171,6 @@ date
 
 ```
 
-<<<<<<< Updated upstream
-=======
 std out
 
 ```bash
@@ -268,10 +203,6 @@ Tue Jun 23 20:42:55 UTC 2026
 ```
 
 
-
-
-
->>>>>>> Stashed changes
 # Calculate intron coverage
 
 about 25 minutes
@@ -294,17 +225,12 @@ date
 
 ```
 
-<<<<<<< Updated upstream
-=======
 ```bash
 Tue Jun 23 20:49:56 UTC 2026
 getting paths for bam files
 creating junction percentiles
 
 ```
-
->>>>>>> Stashed changes
-
 
 # Create intron table
 
