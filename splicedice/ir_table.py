@@ -80,9 +80,7 @@ def getInclusionCounts(filename, annotated=None):
             row = line.rstrip().split("\t")
             junction = row[0]
             for i, val in enumerate(row[1:]):
-                v = float(val)
-                if v != 0.0:
-                    counts[samples[i]][junction] = v
+                counts[samples[i]][junction] = float(val)
     return counts
 
 
