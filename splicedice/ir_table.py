@@ -71,17 +71,21 @@ def getAnnotated(annotation):
 
 
 def getInclusionCounts(filename, annotated=None):
-    counts = {}
+    # Load counts into a numpy float32 matrix rather than a nested dict.
+    # For 495 samples x 800K junctions, float32 uses ~1.6 GB vs ~30+ GB
+    # for a nested dict of Python floats.
     with open(filename) as f:
         samples = f.readline().rstrip().split("\t")[1:]
-        for sample in samples:
-            counts[sample] = {}
+        junctions = []
+        rows = []
         for line in f:
             row = line.rstrip().split("\t")
-            junction = row[0]
-            for i, val in enumerate(row[1:]):
-                counts[samples[i]][junction] = float(val)
-    return counts
+            junctions.append(row[0])
+            rows.append(row[1:])
+    matrix = np.array(rows, dtype=np.float32)  # shape: (junctions, samples)
+    junction_index = {j: i for i, j in enumerate(junctions)}
+    sample_index = {s: i for i, s in enumerate(samples)}
+    return matrix, samples, junctions, junction_index, sample_index
 
 
 def getClusters(filename):
@@ -154,8 +158,10 @@ def getFilteredJunctions(samples, coverageDirectory, annotated, args):
 
 
 def calculateIRforSample(sample, coverageDirectory, counts, clusters, junctions, args):
+    matrix, samples, all_junctions, junction_index, sample_index = counts
     IR = {}
     RSD = {}
+    si = sample_index[sample]
     filename = os.path.join(coverageDirectory, f"{sample}_intron_coverage.txt")
     with open(filename) as percentileCoverage:
         for line in percentileCoverage:
@@ -164,23 +170,22 @@ def calculateIRforSample(sample, coverageDirectory, counts, clusters, junctions,
             if cluster not in junctions:
                 continue
             median = float(row[4])
+            # covArray is computed and discarded immediately per line
+            # rather than stored in a per-sample dict, avoiding O(samples x junctions)
+            # memory overhead for large cohorts.
             covArray = np.array(row[-1].split(","), dtype=float)
             mean = np.mean(covArray)
             RSD[cluster] = np.std(covArray) / mean if mean > 0 else np.nan
-            try:
-                intronCount = counts[sample][cluster]
+            if cluster in junction_index:
+                intronCount = float(matrix[junction_index[cluster], si])
                 if not args.singleJunctionCalculation:
                     for mxCluster in clusters[cluster]:
-                        try:
-                            intronCount += counts[sample][mxCluster]
-                        except KeyError:
-                            pass
+                        if mxCluster in junction_index:
+                            intronCount += float(matrix[junction_index[mxCluster], si])
                 try:
-                    IR[cluster] = median/(median+intronCount)
+                    IR[cluster] = median / (median + intronCount)
                 except ZeroDivisionError:
                     IR[cluster] = np.nan
-            except KeyError:
-                pass
     return IR, RSD
 
 
@@ -228,9 +233,6 @@ def run_with(args):
     outputPrefix = args.outputPrefix
     annotation = args.annotation
 
-    samples = [s.replace("_intron_coverage.txt", "") for s in os.listdir(coverageDirectory) if s.endswith("intron_coverage.txt")]
-    print(f"Starting ir_table with {len(samples)} samples")
-
     if not args.allJunctions:
         print("Loading annotation...")
         annotated = getAnnotated(annotation)
@@ -240,10 +242,11 @@ def run_with(args):
 
     print("Gathering inclusion counts and clusters...")
     counts = getInclusionCounts(countFile)
+    matrix, samples, all_junctions, junction_index, sample_index = counts
     clusters = None
     if not args.singleJunctionCalculation:
         clusters = getClusters(clusterFilename)
-    print(f"Loaded {len(counts)} samples and {len(clusters) if clusters else 0} clusters. {time.time()-start:.1f}s")
+    print(f"Loaded {len(samples)} samples and {len(clusters) if clusters else 0} clusters. {time.time()-start:.1f}s")
 
     print("Collecting junctions across all samples...")
     junctions = getFilteredJunctions(samples, coverageDirectory, annotated, args)
@@ -267,3 +270,4 @@ if __name__ == "__main__":
     add_parser(parser)
     args = parser.parse_args()
     run_with(args)
+    
