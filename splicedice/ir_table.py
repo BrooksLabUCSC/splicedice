@@ -136,7 +136,8 @@ def _filterJunctionsForSample(args_tuple):
                 continue
             covArray = np.array(row[-1].split(","), dtype=float)
             mean = np.mean(covArray)
-            rsd = np.std(covArray) / mean if mean > 0 else np.nan
+            std = np.sqrt(np.mean((covArray - mean)**2))
+            rsd = std / mean if mean > 0 else np.nan
             if rsd < float(RSDthreshold):
                 filtered.add(cluster)
     return filtered
@@ -175,7 +176,8 @@ def calculateIRforSample(sample, coverageDirectory, counts, clusters, junctions,
             # memory overhead for large cohorts.
             covArray = np.array(row[-1].split(","), dtype=float)
             mean = np.mean(covArray)
-            RSD[cluster] = np.std(covArray) / mean if mean > 0 else np.nan
+            std = np.sqrt(np.mean((covArray - mean)**2))
+            RSD[cluster] = std / mean if mean > 0 else np.nan
             if cluster in junction_index:
                 intronCount = float(matrix[junction_index[cluster], si])
                 if not args.singleJunctionCalculation:
@@ -185,9 +187,8 @@ def calculateIRforSample(sample, coverageDirectory, counts, clusters, junctions,
                 try:
                     IR[cluster] = median / (median + intronCount)
                 except ZeroDivisionError:
-                    IR[cluster] = np.nan
+                	IR[cluster] = np.nan
     return IR, RSD
-
 
 def writeIRtable(samples, coverageDirectory, counts, clusters, outputPrefix, junctions, args):
     tab = "\t"
