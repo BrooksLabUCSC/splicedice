@@ -680,24 +680,24 @@ Done. Total runtime: ~150s
 Actual output
 
 ```bash
-Thu Jun 25 21:33:17 UTC 2026
+Fri Jun 26 00:41:17 UTC 2026
 Loading annotation...
-Annotation loaded: 528735 annotated junctions. 55.2s
+Annotation loaded: 528735 annotated junctions. 55.5s
 Gathering inclusion counts and clusters...
-Loaded 6 samples and 333069 clusters. 58.5s
+Loaded 6 samples and 333069 clusters. 58.9s
 Collecting junctions across all samples...
-getJunctions complete: 210470 junctions. 5.0s
-RSD filtering complete: 96399 junctions retained. 25.1s
-Junction collection and RSD filtering complete: 96399 junctions retained. 83.6s
+getJunctions complete: 210470 junctions. 4.8s
+RSD filtering complete: 96399 junctions retained. 18.7s
+Junction collection and RSD filtering complete: 96399 junctions retained. 77.6s
 Writing IR table...
 IR calculated for 6/6 samples
-IR table written. 145.3s
-Done. Total runtime: 145.3s
+IR table written. 119.2s
+Done. Total runtime: 119.2s
 
-real    2m29.781s
-user    0m0.059s
-sys     0m0.060s
-Thu Jun 25 21:35:47 UTC 2026
+real    2m3.914s
+user    0m0.063s
+sys     0m0.071s
+Fri Jun 26 00:43:21 UTC 2026
 
 ```
 
@@ -715,6 +715,26 @@ Expected: no output (files identical).
 Actual result: different
 
 ```bash
+ubuntu@hbeale-mesa:/mnt/gitCode/splicedice$ diff ${this_base_dir}/analysis/_intron_retention.tsv \
+    <(zcat ${known_good_dir}/_intron_retention.tsv.gz) | head
+1,85c1,85
+< Junction      SRR12801019     SRR12801020     SRR12801023     SRR12801024     SRR12801027     SRR12801028
+< GL000008.2:163999-164602:-    0.200   0.000   nan     nan     0.000   nan
+< GL000009.2:55162-78082:-      0.100   0.083   0.000   0.000   nan     0.000
+< GL000194.1:112851-114985:-    0.000   0.005   0.000   0.000   0.012   0.000
+< GL000194.1:11336-20237:-      1.000   nan     0.000   nan     0.000   0.000
+< GL000194.1:11336-28266:-      0.333   nan     0.111   nan     0.333   0.000
+< GL000194.1:20374-28266:-      0.333   nan     0.250   nan     1.000   0.000
+< GL000194.1:54833-55445:-      0.406   0.667   0.277   0.348   0.378   0.282
+< GL000194.1:55677-112791:-     0.014   0.008   0.019   0.011   0.038   0.039
+
+```
+
+
+
+look at the files
+
+```bash
 head  ${this_base_dir}/analysis/_intron_retention.tsv
 zcat ${known_good_dir}/_intron_retention.tsv.gz | head
 ```
@@ -722,6 +742,8 @@ zcat ${known_good_dir}/_intron_retention.tsv.gz | head
 
 
 ```bash
+ubuntu@hbeale-mesa:/mnt/gitCode/splicedice$ head  ${this_base_dir}/analysis/_intron_retention.tsv
+zcat ${known_good_dir}/_intron_retention.tsv.gz | head
 Junction        SRR12801019     SRR12801020     SRR12801023     SRR12801024     SRR12801027     SRR12801028
 GL000008.2:163999-164602:-      0.200   0.000   nan     nan     0.000   nan
 GL000009.2:55162-78082:-        0.100   0.083   0.000   0.000   nan     0.000
@@ -742,6 +764,8 @@ GL000194.1:20374-28266:-        0.333   0.250   nan     0.000   1.000   nan
 GL000194.1:54833-55445:-        0.406   0.277   0.348   0.282   0.378   0.667
 GL000194.1:55677-112791:-       0.014   0.019   0.011   0.039   0.038   0.008
 GL000195.1:138141-139989:+      0.024   0.029   0.014   0.006   0.029   0.009
+ubuntu@hbeale-mesa:/mnt/gitCode/splicedice$ 
+
 ```
 
 the column order is different
@@ -779,6 +803,12 @@ diff /mnt/tmp/_intron_retention_reordered.tsv \
 
 no difference reported!
 
+```bash
+ubuntu@hbeale-mesa:/mnt/gitCode/splicedice$ diff /mnt/tmp/_intron_retention_reordered.tsv \
+    <(zcat ${known_good_dir}/_intron_retention.tsv.gz) | head
+ubuntu@hbeale-mesa:/mnt/gitCode/splicedice$ 
+```
+
 
 
 ```bash
@@ -787,6 +817,8 @@ zcat ${known_good_dir}/_intron_retention.tsv.gz | head
 ```
 
 ```bash
+ubuntu@hbeale-mesa:/mnt/gitCode/splicedice$ head /mnt/tmp/_intron_retention_reordered.tsv 
+zcat ${known_good_dir}/_intron_retention.tsv.gz | head
 Junction        SRR12801019     SRR12801023     SRR12801024     SRR12801028     SRR12801027     SRR12801020
 GL000008.2:163999-164602:-      0.200   nan     nan     nan     0.000   0.000
 GL000009.2:55162-78082:-        0.100   0.000   0.000   0.000   nan     0.083
@@ -807,5 +839,8 @@ GL000194.1:20374-28266:-        0.333   0.250   nan     0.000   1.000   nan
 GL000194.1:54833-55445:-        0.406   0.277   0.348   0.282   0.378   0.667
 GL000194.1:55677-112791:-       0.014   0.019   0.011   0.039   0.038   0.008
 GL000195.1:138141-139989:+      0.024   0.029   0.014   0.006   0.029   0.009
+ubuntu@hbeale-mesa:/mnt/gitCode/splicedice$ 
 ```
+
+
 
