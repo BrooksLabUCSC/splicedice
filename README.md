@@ -19,6 +19,9 @@ user discretion is advised.
 - [Manifest Format](#manifest-format)
   - [BED Manifest](#bed-manifest) (used by `quant`)
   - [BAM Manifest](#bam-manifest) (used by `intron_coverage`)
+- [Examples](#examples)
+   - [SUGP1](#SUGP1-splicedice-walkthrough)
+   - [TCGA LUAD](#TCGA-LUAD-compute)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -164,6 +167,16 @@ SRR12801024	/path/to/bams/SRR12801024.bam	SUGP1_kd
 SRR12801027	/path/to/bams/SRR12801027.bam	control
 SRR12801028	/path/to/bams/SRR12801028.bam	SUGP1_kd
 ```
+
+## Examples
+
+### SUGP1 splicedice walkthrough
+
+Generates percent-spliced and intron retention values from RNA-seq data from [SRP286876](https://www.ncbi.nlm.nih.gov/sra/?term=SRP286876), comparing HEK293T cells transfected with control siRNA to those transfected with siSUGP1 (three biological replicates per condition; SRR12801019/20/23/24/27/28). The walkthrough is available in [`examples/SUGP1_walkthrough/SUGP1_walkthrough_2026.06.23_11.24.14.md`](examples/SUGP1_walkthrough/SUGP1_walkthrough_2026.06.23_11.24.14.md).
+
+### TCGA LUAD compute
+
+Percent-spliced and intron retention values were computed for 495 TCGA lung adenocarcinoma (LUAD) samples with disk-constrained, batched BAM downloads from the GDC. Output tables for this run are archived on Zenodo: https://doi.org/10.5281/zenodo.21143192. The process is documented  in [`examples/tcga_luad_ps_ir_compute/2026-06-18_tcga_luad_ps_ir_compute.md`](examples/tcga_luad_ps_ir_compute/2026-06-18_tcga_luad_ps_ir_compute.md).
 
 ## Contributing
 
