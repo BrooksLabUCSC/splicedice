@@ -6,25 +6,29 @@
 
 Holly Beale
 
+
+
+**Context**
+
+This notebook documents a splicedice run that generated percent spliced and intron retention values from 495 TCGA lung adenocarcinoma (LUAD) samples.
+
+This approach is designed for limited disk space. Bams are downloaded one at a time (for identifying introns with intron-prospector) or in small batches (for calculating intron coverage with splicedice intron_coverage). 
+
+It uses tools from Holly Beale's splicedice_analysis repo. Those scripts have been copied into the same directory as this file.
+
+
+
 **Repos**
 
 https://github.com/BrooksLabUCSC/splicedice
 
 https://github.com/hbeale/splicedice_analysis
 
-**Output**
-
-Zenodo
 
 
+**Output availability**
 
-**Context**
-
-This notebook documents a splicedice run that generated percent spliced and intron retention values from TCGA lung adenocarcinoma (LUAD) samples.
-
-This approach is designed for limited disk space. Bams are downloaded one at a time (for identifying introns with intron-prospector) or in small batches (for calculating intron coverage with splicedice intron_coverage). 
-
-It uses tools from Holly Beale's splicedice_analysis repo. Those scripts have been copied into the same directory as this file.
+Zenodo @ https://doi.org/10.5281/zenodo.21143192
 
 
 
