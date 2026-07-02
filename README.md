@@ -176,7 +176,7 @@ Generates percent-spliced and intron retention values from RNA-seq data from [SR
 
 ### TCGA LUAD compute
 
-Percent-spliced and intron retention values were computed for 495 TCGA lung adenocarcinoma (LUAD) samples with disk-constrained, batched BAM downloads from the GDC. Output tables for this run are archived on Zenodo: https://doi.org/10.5281/zenodo.21143192. The process is documented  in [`examples/tcga_luad_ps_ir_compute/2026-06-18_tcga_luad_ps_ir_compute.md`](examples/tcga_luad_ps_ir_compute/2026-06-18_tcga_luad_ps_ir_compute.md).
+Percent-spliced and intron retention values were computed for 495 TCGA lung adenocarcinoma (LUAD) samples with disk-constrained, batched BAM downloads from the GDC. Output tables for this run are archived on Zenodo: https://doi.org/10.5281/zenodo.21143192. The process is documented  in [`examples/TCGA_LUAD/2026-06-18_tcga_luad_ps_ir_compute.md`](examples/TCGA_LUAD/2026-06-18_tcga_luad_ps_ir_compute.md).
 
 ## Contributing
 
